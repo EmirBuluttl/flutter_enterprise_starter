@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:mobx/mobx.dart';
 import '../../../core/base/view_model/base_view_model.dart';
 import '../../../core/constants/app_constants.dart';
+import '../../../core/init/theme/app_colors.dart';
 import '../model/login_request_model.dart';
 import '../model/login_response_model.dart';
 import '../service/i_login_service.dart';
@@ -95,7 +96,7 @@ abstract class _LoginViewModelBase with Store implements BaseViewModel {
                 Expanded(child: Text(AppStrings.loginSuccessMessage)),
               ],
             ),
-            backgroundColor: const Color(0xFF2EC4B6),
+            backgroundColor: AppColors.success,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(10),

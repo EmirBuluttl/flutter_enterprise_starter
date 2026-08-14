@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-/// Stateless reusable primary button with loading, active, and disabled states
+/// Stateless reusable primary button styled completely from Theme.of(context)
 class CustomPrimaryButton extends StatelessWidget {
   final String text;
   final VoidCallback? onPressed;
@@ -19,7 +19,6 @@ class CustomPrimaryButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final isClickable = isEnabled && !isLoading;
 
     return SizedBox(
@@ -27,21 +26,7 @@ class CustomPrimaryButton extends StatelessWidget {
       height: 52,
       child: ElevatedButton(
         onPressed: isClickable ? onPressed : null,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: theme.colorScheme.primary,
-          foregroundColor: Colors.white,
-          disabledBackgroundColor: theme.brightness == Brightness.dark
-              ? const Color(0xFF334155)
-              : const Color(0xFFE2E8F0),
-          disabledForegroundColor: theme.brightness == Brightness.dark
-              ? const Color(0xFF64748B)
-              : const Color(0xFF94A3B8),
-          elevation: isClickable ? 2 : 0,
-          shadowColor: theme.colorScheme.primary.withValues(alpha: 0.3),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-        ),
+        // All colors and styles are inherited directly from ElevatedButtonThemeData in LightTheme / DarkTheme
         child: isLoading
             ? const SizedBox(
                 width: 22,
