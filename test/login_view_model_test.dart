@@ -1,22 +1,25 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:flutter_enterprise_starter/feature/login/model/login_request_model.dart';
-import 'package:flutter_enterprise_starter/feature/login/model/login_response_model.dart';
+import 'package:flutter_enterprise_starter/feature/login/model/phone_verification_response_model.dart';
 import 'package:flutter_enterprise_starter/feature/login/service/i_login_service.dart';
 import 'package:flutter_enterprise_starter/feature/login/view_model/login_view_model.dart';
 
 class MockLoginService implements ILoginService {
   bool wasCalled = false;
-  LoginRequestModel? lastRequest;
+  String? lastPhone;
 
   @override
-  Future<LoginResponseModel> login(LoginRequestModel request) async {
+  Future<PhoneVerificationResponseModel> requestPhoneVerification(String rawPhone) async {
     wasCalled = true;
-    lastRequest = request;
-    return LoginResponseModel(
-      success: true,
-      message: 'Test Login Success',
-      token: 'test_token',
-      userId: 'test_user_id',
+    lastPhone = rawPhone;
+    return PhoneVerificationResponseModel(
+      status: 'Success',
+      data: PhoneVerificationData(
+        phoneVerification: PhoneVerificationDetail(
+          id: 'test_guid_123',
+          phone: '90$rawPhone',
+          verifiedAt: null,
+        ),
+      ),
     );
   }
 }
@@ -40,12 +43,10 @@ void main() {
     });
 
     test('Invalid phone number cases', () {
-      // Less than 10 digits
       viewModel.setPhoneNumber('555123');
       expect(viewModel.isPhoneValid, isFalse);
       expect(viewModel.isButtonEnabled, isFalse);
 
-      // 10 digits but does not start with 5
       viewModel.setPhoneNumber('2121234567');
       expect(viewModel.isPhoneValid, isFalse);
       expect(viewModel.isButtonEnabled, isFalse);
@@ -57,7 +58,7 @@ void main() {
       expect(viewModel.isButtonEnabled, isTrue);
     });
 
-    test('submitLogin triggers service and sets loginResult', () async {
+    test('submitLogin triggers GET verification service and sets verificationResult', () async {
       viewModel.setPhoneNumber('5559876543');
       expect(viewModel.isButtonEnabled, isTrue);
 
@@ -68,8 +69,9 @@ void main() {
 
       expect(viewModel.isLoading, isFalse);
       expect(mockService.wasCalled, isTrue);
-      expect(mockService.lastRequest?.formattedPhoneNumber, '+905559876543');
-      expect(viewModel.loginResult?.success, isTrue);
+      expect(mockService.lastPhone, '5559876543');
+      expect(viewModel.verificationResult?.isSuccess, isTrue);
+      expect(viewModel.verificationResult?.data?.phoneVerification?.id, 'test_guid_123');
     });
   });
 }

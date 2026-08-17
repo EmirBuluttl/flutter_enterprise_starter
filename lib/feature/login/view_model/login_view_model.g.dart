@@ -78,21 +78,21 @@ mixin _$LoginViewModel on _LoginViewModelBase, Store {
     });
   }
 
-  late final _$loginResultAtom = Atom(
-    name: '_LoginViewModelBase.loginResult',
+  late final _$verificationResultAtom = Atom(
+    name: '_LoginViewModelBase.verificationResult',
     context: context,
   );
 
   @override
-  LoginResponseModel? get loginResult {
-    _$loginResultAtom.reportRead();
-    return super.loginResult;
+  PhoneVerificationResponseModel? get verificationResult {
+    _$verificationResultAtom.reportRead();
+    return super.verificationResult;
   }
 
   @override
-  set loginResult(LoginResponseModel? value) {
-    _$loginResultAtom.reportWrite(value, super.loginResult, () {
-      super.loginResult = value;
+  set verificationResult(PhoneVerificationResponseModel? value) {
+    _$verificationResultAtom.reportWrite(value, super.verificationResult, () {
+      super.verificationResult = value;
     });
   }
 
@@ -129,7 +129,7 @@ mixin _$LoginViewModel on _LoginViewModelBase, Store {
 rawPhoneNumber: ${rawPhoneNumber},
 isLoading: ${isLoading},
 errorMessage: ${errorMessage},
-loginResult: ${loginResult},
+verificationResult: ${verificationResult},
 isPhoneValid: ${isPhoneValid},
 isButtonEnabled: ${isButtonEnabled}
     ''';

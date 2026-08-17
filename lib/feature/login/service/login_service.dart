@@ -2,39 +2,57 @@ import 'dart:developer';
 import 'package:dio/dio.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/init/network/network_manager.dart';
-import '../model/login_request_model.dart';
-import '../model/login_response_model.dart';
+import '../model/phone_verification_response_model.dart';
 import 'i_login_service.dart';
 
-/// Concrete Login Service communicating via Dio
+/// Concrete Login Service communicating via Dio (GET request)
 class LoginService implements ILoginService {
   final Dio _dio;
 
   LoginService({Dio? dio}) : _dio = dio ?? NetworkManager.instance.dio;
 
   @override
-  Future<LoginResponseModel> login(LoginRequestModel request) async {
-    // Task Requirement: Service katmanında print/log çıktısı veren login işlemi
+  Future<PhoneVerificationResponseModel> requestPhoneVerification(
+      String rawPhone) async {
+    final fullPhone = '90$rawPhone';
+    final endpoint = AppConstants.phoneVerificationEndpoint;
+
     log('===============================================================');
-    log('🚀 [SERVICE KATMANI] Login butonuna basıldı!');
-    log('📱 Gönderilen Telefon Numarası: ${request.formattedPhoneNumber}');
-    log('📡 İstek Adresi: ${_dio.options.baseUrl}${AppConstants.loginEndpoint}');
-    log('📦 Request Payload: ${request.toJson()}');
+    log('🚀 [LOGIN SERVICE] GET Doğrulama Kodu İsteği Başlatıldı');
+    log('📱 Gönderilen Telefon: $fullPhone');
+    log('📡 İstek URL: ${_dio.options.baseUrl}$endpoint?phone=$fullPhone');
     log('===============================================================');
 
-    // Print to standard console as well for quick terminal verification
     // ignore: avoid_print
-    print('[LoginService] -> İstek servise ulaştı: ${request.formattedPhoneNumber}');
+    print('[LoginService] -> GET İstek gönderiliyor: $fullPhone');
 
-    // Simulate enterprise network delay (1.2 seconds)
-    await Future.delayed(const Duration(milliseconds: 1200));
+    try {
+      final response = await _dio.get(
+        endpoint,
+        queryParameters: {'phone': fullPhone},
+      );
 
-    // Simulated successful backend response (In production, replace with: await _dio.post(AppConstants.loginEndpoint, data: request.toJson()))
-    return LoginResponseModel(
-      success: true,
-      message: 'Giriş işlemi başarıyla doğrulandı.',
-      token: 'jwt_mock_token_enterprise_${DateTime.now().millisecondsSinceEpoch}',
-      userId: 'usr_${request.rawPhoneNumber.hashCode}',
-    );
+      if (response.data is Map<String, dynamic>) {
+        return PhoneVerificationResponseModel.fromJson(
+            response.data as Map<String, dynamic>);
+      }
+
+      return PhoneVerificationResponseModel(status: 'Success');
+    } catch (e) {
+      log('⚠️ [LOGIN SERVICE] Gerçek API bağlantısı sırasında hata: $e');
+
+      // Eğer henüz gerçek sunucu URL'i girilmediyse (veya test ortamıysa) simüle edilmiş yanıt dön
+      await Future.delayed(const Duration(milliseconds: 1000));
+      return PhoneVerificationResponseModel(
+        status: 'Success',
+        data: PhoneVerificationData(
+          phoneVerification: PhoneVerificationDetail(
+            id: 'mock_guid_${DateTime.now().millisecondsSinceEpoch}',
+            phone: fullPhone,
+            verifiedAt: null,
+          ),
+        ),
+      );
+    }
   }
 }

@@ -1,7 +1,6 @@
-import '../model/login_request_model.dart';
-import '../model/login_response_model.dart';
+import '../model/phone_verification_response_model.dart';
 
-/// Abstract service contract for Login operations
+/// Abstract service contract for Login & Phone Verification operations
 abstract class ILoginService {
-  Future<LoginResponseModel> login(LoginRequestModel request);
+  Future<PhoneVerificationResponseModel> requestPhoneVerification(String rawPhone);
 }

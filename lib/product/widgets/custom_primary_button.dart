@@ -26,29 +26,33 @@ class CustomPrimaryButton extends StatelessWidget {
       height: 52,
       child: ElevatedButton(
         onPressed: isClickable ? onPressed : null,
-        // All colors and styles are inherited directly from ElevatedButtonThemeData in LightTheme / DarkTheme
         child: isLoading
             ? const SizedBox(
                 width: 22,
                 height: 22,
                 child: CircularProgressIndicator(
                   strokeWidth: 2.5,
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.black),
                 ),
               )
             : Row(
                 mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   if (icon != null) ...[
                     Icon(icon, size: 20),
                     const SizedBox(width: 8),
                   ],
-                  Text(
-                    text,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 0.3,
+                  Flexible(
+                    child: Text(
+                      text,
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 0.2,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                 ],

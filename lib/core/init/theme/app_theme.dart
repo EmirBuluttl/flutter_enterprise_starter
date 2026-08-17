@@ -24,7 +24,7 @@ class LightTheme implements AppTheme {
           secondary: AppColors.secondary,
           surface: AppColors.lightSurface,
           error: AppColors.error,
-          onPrimary: Colors.white,
+          onPrimary: AppColors.onPrimary,
           onSecondary: Colors.white,
           onSurface: AppColors.lightTextPrimary,
           onError: Colors.white,
@@ -62,7 +62,7 @@ class LightTheme implements AppTheme {
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: AppColors.primary, width: 1.8),
+            borderSide: const BorderSide(color: AppColors.primary, width: 2.0),
           ),
           errorBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
@@ -78,15 +78,15 @@ class LightTheme implements AppTheme {
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
             backgroundColor: AppColors.primary,
-            foregroundColor: Colors.white,
+            foregroundColor: AppColors.onPrimary,
             disabledBackgroundColor: AppColors.buttonDisabledBg,
             disabledForegroundColor: AppColors.buttonDisabledText,
             elevation: 0,
-            minimumSize: const Size(double.infinity, 52),
+            minimumSize: const Size(64, 50),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
             ),
-            textStyle: AppTextStyles.buttonText(color: Colors.white),
+            textStyle: AppTextStyles.buttonText(color: AppColors.onPrimary),
           ),
         ),
       );
@@ -105,11 +105,11 @@ class DarkTheme implements AppTheme {
         primaryColor: AppColors.primaryDark,
         scaffoldBackgroundColor: AppColors.darkBackground,
         colorScheme: const ColorScheme.dark(
-          primary: AppColors.primaryDark,
+          primary: AppColors.primary,
           secondary: AppColors.secondary,
           surface: AppColors.darkSurface,
           error: AppColors.error,
-          onPrimary: Colors.white,
+          onPrimary: AppColors.onPrimary,
           onSecondary: Colors.white,
           onSurface: AppColors.darkTextPrimary,
           onError: Colors.white,
@@ -147,7 +147,7 @@ class DarkTheme implements AppTheme {
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: AppColors.primaryDark, width: 1.8),
+            borderSide: const BorderSide(color: AppColors.primary, width: 2.0),
           ),
           errorBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
@@ -162,16 +162,16 @@ class DarkTheme implements AppTheme {
         ),
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.primaryDark,
-            foregroundColor: Colors.white,
+            backgroundColor: AppColors.primary,
+            foregroundColor: AppColors.onPrimary,
             disabledBackgroundColor: AppColors.darkButtonDisabledBg,
             disabledForegroundColor: AppColors.darkButtonDisabledText,
             elevation: 0,
-            minimumSize: const Size(double.infinity, 52),
+            minimumSize: const Size(64, 50),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
             ),
-            textStyle: AppTextStyles.buttonText(color: Colors.white),
+            textStyle: AppTextStyles.buttonText(color: AppColors.onPrimary),
           ),
         ),
       );

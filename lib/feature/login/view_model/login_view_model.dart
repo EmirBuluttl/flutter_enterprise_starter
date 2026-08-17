@@ -2,9 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:mobx/mobx.dart';
 import '../../../core/base/view_model/base_view_model.dart';
 import '../../../core/constants/app_constants.dart';
-import '../../../core/init/theme/app_colors.dart';
-import '../model/login_request_model.dart';
-import '../model/login_response_model.dart';
+import '../../otp/view/otp_view.dart';
+import '../model/phone_verification_response_model.dart';
 import '../service/i_login_service.dart';
 import '../service/login_service.dart';
 
@@ -31,12 +30,11 @@ abstract class _LoginViewModelBase with Store implements BaseViewModel {
     rawPhoneNumber = '';
     isLoading = false;
     errorMessage = null;
-    loginResult = null;
+    verificationResult = null;
   }
 
-  // --- Observables (Değişen State'ler) ---
+  // --- Observables ---
 
-  /// Sadece saf 10 hane rakam tutar (Örn: 5551234567)
   @observable
   String rawPhoneNumber = '';
 
@@ -47,11 +45,10 @@ abstract class _LoginViewModelBase with Store implements BaseViewModel {
   String? errorMessage;
 
   @observable
-  LoginResponseModel? loginResult;
+  PhoneVerificationResponseModel? verificationResult;
 
-  // --- Computed Properties (Türetilmiş Değerler) ---
+  // --- Computed Properties ---
 
-  /// Türkiye telefon numarası kuralı: 10 hane ve 5 ile başlamalı
   @computed
   bool get isPhoneValid {
     if (rawPhoneNumber.length != AppConstants.rawPhoneLength) {
@@ -60,11 +57,10 @@ abstract class _LoginViewModelBase with Store implements BaseViewModel {
     return rawPhoneNumber.startsWith('5');
   }
 
-  /// Butonun aktif/pasif durumu: Telefon geçerli ve yüklenme durumu yoksa aktif
   @computed
   bool get isButtonEnabled => isPhoneValid && !isLoading;
 
-  // --- Actions (State'i Güncelleyen Fonksiyonlar) ---
+  // --- Actions ---
 
   @action
   void setPhoneNumber(String value) {
@@ -82,30 +78,28 @@ abstract class _LoginViewModelBase with Store implements BaseViewModel {
     errorMessage = null;
 
     try {
-      final request = LoginRequestModel(rawPhoneNumber: rawPhoneNumber);
-      final response = await _loginService.login(request);
-      loginResult = response;
+      final response =
+          await _loginService.requestPhoneVerification(rawPhoneNumber);
+      verificationResult = response;
 
-      if (response.success && buildContext != null && buildContext!.mounted) {
-        ScaffoldMessenger.of(buildContext!).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                const Icon(Icons.check_circle_outline, color: Colors.white),
-                const SizedBox(width: 10),
-                Expanded(child: Text(AppStrings.loginSuccessMessage)),
-              ],
-            ),
-            backgroundColor: AppColors.success,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10),
+      if (response.isSuccess && buildContext != null && buildContext!.mounted) {
+        final verificationId =
+            response.data?.phoneVerification?.id ?? 'mock_guid';
+
+        Navigator.push(
+          buildContext!,
+          MaterialPageRoute(
+            builder: (context) => OtpView(
+              phoneNumber: rawPhoneNumber,
+              phoneVerificationId: verificationId,
             ),
           ),
         );
+      } else {
+        errorMessage = AppStrings.generalErrorMessage;
       }
     } catch (e) {
-      errorMessage = AppStrings.loginErrorMessage;
+      errorMessage = AppStrings.generalErrorMessage;
     } finally {
       isLoading = false;
     }
