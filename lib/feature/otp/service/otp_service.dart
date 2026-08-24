@@ -6,7 +6,7 @@ import '../model/verify_otp_request_model.dart';
 import '../model/verify_otp_response_model.dart';
 import 'i_otp_service.dart';
 
-/// Concrete OTP Service communicating via Dio (Strict Backend Verification)
+/// Concrete OTP Service communicating via Dio (Strict Backend Verification with full Header & Body Logging)
 class OtpService implements IOtpService {
   final Dio _dio;
 
@@ -33,9 +33,11 @@ class OtpService implements IOtpService {
     // ignore: avoid_print
     print('---------------------------------------------------------------');
     // ignore: avoid_print
-    print('[OtpService] -> POST İstek Gönderiliyor: ${_dio.options.baseUrl}$endpoint');
+    print('[OtpService] -> POST İSTEK GÖNDERİLİYOR: ${_dio.options.baseUrl}$endpoint');
     // ignore: avoid_print
-    print('Payload: ${finalRequest.toJson()}');
+    print('[OtpService] -> REQUEST HEADERS: ${_dio.options.headers}');
+    // ignore: avoid_print
+    print('[OtpService] -> REQUEST PAYLOAD BODY: ${finalRequest.toJson()}');
 
     try {
       final response = await _dio.post(
@@ -45,6 +47,8 @@ class OtpService implements IOtpService {
 
       // ignore: avoid_print
       print('[OtpService] -> REAL SERVER HTTP STATUS: ${response.statusCode}');
+      // ignore: avoid_print
+      print('[OtpService] -> REAL SERVER RESPONSE HEADERS: ${response.headers}');
       // ignore: avoid_print
       print('[OtpService] -> REAL SERVER RESPONSE BODY: ${response.data}');
 
@@ -86,6 +90,8 @@ class OtpService implements IOtpService {
 
       // ignore: avoid_print
       print('[OtpService] -> ERROR HTTP STATUS: ${e.response?.statusCode}');
+      // ignore: avoid_print
+      print('[OtpService] -> ERROR RESPONSE HEADERS: ${e.response?.headers}');
       // ignore: avoid_print
       print('[OtpService] -> ERROR RESPONSE DATA: ${e.response?.data}');
 
