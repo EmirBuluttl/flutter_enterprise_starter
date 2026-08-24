@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:mask_text_input_formatter/mask_text_input_formatter.dart';
-import '../../core/constants/app_constants.dart';
 
 /// Stateless custom phone text field with Turkey phone mask (+90 (5XX) XXX XX XX)
 class CustomPhoneField extends StatelessWidget {
@@ -9,6 +8,7 @@ class CustomPhoneField extends StatelessWidget {
   final ValueChanged<String> onDigitsChanged;
   final String? errorText;
   final FocusNode? focusNode;
+  final String? labelText;
 
   CustomPhoneField({
     super.key,
@@ -16,6 +16,7 @@ class CustomPhoneField extends StatelessWidget {
     required this.onDigitsChanged,
     this.errorText,
     this.focusNode,
+    this.labelText,
   });
 
   // Mask definition for Turkey phone format: +90 (###) ### ## ##
@@ -32,33 +33,49 @@ class CustomPhoneField extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          AppStrings.phoneLabel,
-          style: theme.textTheme.labelMedium?.copyWith(
-            fontWeight: FontWeight.w600,
-            color: theme.colorScheme.onSurface.withValues(alpha: 0.85),
+        if (labelText != null) ...[
+          Text(
+            labelText!,
+            style: theme.textTheme.labelMedium?.copyWith(
+              fontWeight: FontWeight.w600,
+              color: theme.colorScheme.primary,
+            ),
           ),
-        ),
-        const SizedBox(height: 8),
+          const SizedBox(height: 8),
+        ],
         TextField(
           controller: controller,
           focusNode: focusNode,
           keyboardType: TextInputType.phone,
           textInputAction: TextInputAction.done,
+          style: theme.textTheme.bodyLarge?.copyWith(
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 0.5,
+          ),
           inputFormatters: [
-            LengthLimitingTextInputFormatter(19), // Max characters of +90 (###) ### ## ##
+            LengthLimitingTextInputFormatter(19),
             _phoneFormatter,
           ],
           onChanged: (text) {
-            // Extract only the raw 10 digits (e.g., 5551234567) without formatting symbols
             final unmaskedText = _phoneFormatter.getUnmaskedText();
             onDigitsChanged(unmaskedText);
           },
           decoration: InputDecoration(
-            hintText: AppStrings.phoneHint,
-            prefixIcon: Icon(
-              Icons.phone_iphone_rounded,
-              color: theme.colorScheme.primary,
+            hintText: '0xxx xxx xxxx',
+            contentPadding: const EdgeInsets.symmetric(vertical: 8),
+            isDense: true,
+            border: UnderlineInputBorder(
+              borderSide: BorderSide(color: theme.colorScheme.primary, width: 2.0),
+            ),
+            enabledBorder: UnderlineInputBorder(
+              borderSide: BorderSide(
+                color: theme.colorScheme.primary.withValues(alpha: 0.8),
+                width: 1.8,
+              ),
+            ),
+            focusedBorder: UnderlineInputBorder(
+              borderSide: BorderSide(color: theme.colorScheme.primary, width: 2.2),
             ),
             errorText: errorText,
           ),

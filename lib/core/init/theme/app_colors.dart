@@ -4,12 +4,12 @@ import 'package:flutter/material.dart';
 class AppColors {
   AppColors._();
 
-  // Renault Brand Colors
-  static const Color primary = Color(0xFFFFC800); // Iconic Renault Yellow/Amber
-  static const Color primaryDark = Color(0xFFFFD54F);
-  static const Color onPrimary = Color(0xFF111111); // Dark text on yellow button
+  // Renault Brand Colors (Sky Blue Palette matching Store UI)
+  static const Color primary = Color(0xFF0099E6); // Sky Blue accent from screenshot
+  static const Color primaryDark = Color(0xFF0088CC);
+  static const Color onPrimary = Color(0xFFFFFFFF); // White text/icon on blue button
   static const Color secondary = Color(0xFF1E293B); // Deep Slate
-  static const Color accent = Color(0xFF0052CC);
+  static const Color accent = Color(0xFF0099E6);
 
   // Status & Feedback Colors
   static const Color success = Color(0xFF10B981);
@@ -18,7 +18,7 @@ class AppColors {
   static const Color info = Color(0xFF3B82F6);
 
   // Light Theme Neutrals
-  static const Color lightBackground = Color(0xFFF8F9FA);
+  static const Color lightBackground = Color(0xFFFFFFFF);
   static const Color lightSurface = Color(0xFFFFFFFF);
   static const Color lightBorder = Color(0xFFE2E8F0);
   static const Color lightTextPrimary = Color(0xFF0F172A);
@@ -34,8 +34,8 @@ class AppColors {
   static const Color darkTextMuted = Color(0xFF64748B);
 
   // Component Specific
-  static const Color buttonDisabledBg = Color(0xFFE2E8F0);
-  static const Color buttonDisabledText = Color(0xFF94A3B8);
+  static const Color buttonDisabledBg = Color(0xFFEBECEF);
+  static const Color buttonDisabledText = Color(0xFF374151);
   static const Color darkButtonDisabledBg = Color(0xFF334155);
   static const Color darkButtonDisabledText = Color(0xFF64748B);
 }
