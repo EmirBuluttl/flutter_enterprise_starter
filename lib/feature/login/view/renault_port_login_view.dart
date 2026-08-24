@@ -2,10 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_mobx/flutter_mobx.dart';
 import '../../../core/base/view/base_view.dart';
 import '../../../product/widgets/custom_phone_field.dart';
-import '../../../product/widgets/renault_logo.dart';
 import '../view_model/login_view_model.dart';
 
-/// Pixel-Perfect Replica of the Official Renault Port Phone Input Screen
+/// Renault Port Phone Input Screen strictly bound to Theme.of(context) & AppTheme
 class RenaultPortLoginView extends StatelessWidget {
   const RenaultPortLoginView({super.key});
 
@@ -17,13 +16,18 @@ class RenaultPortLoginView extends StatelessWidget {
         model.init();
       },
       onPageBuilder: (context, viewModel) {
+        final theme = Theme.of(context);
+
         return Scaffold(
-          backgroundColor: Colors.white,
+          backgroundColor: theme.scaffoldBackgroundColor,
           appBar: AppBar(
-            backgroundColor: Colors.white,
+            backgroundColor: theme.scaffoldBackgroundColor,
             elevation: 0,
             leading: IconButton(
-              icon: const Icon(Icons.arrow_back, color: Colors.black),
+              icon: Icon(
+                Icons.arrow_back,
+                color: theme.colorScheme.onSurface,
+              ),
               onPressed: () {
                 if (Navigator.canPop(context)) {
                   Navigator.pop(context);
@@ -37,27 +41,19 @@ class RenaultPortLoginView extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 32),
 
-                  // 1. Renault Diamond Emblem (Centered Top)
-                  const Center(
-                    child: RenaultLogo(size: 80),
-                  ),
-
-                  const SizedBox(height: 50),
-
-                  // 2. Label: "Your phone number" (Sky Blue Accent)
-                  const Text(
+                  // 1. Label: "Your phone number" (Styled from Theme primary color)
+                  Text(
                     'Your phone number',
-                    style: TextStyle(
-                      fontSize: 16,
+                    style: theme.textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.w600,
-                      color: Color(0xFF0099E6), // Renault Sky Blue Accent
+                      color: theme.colorScheme.primary,
                     ),
                   ),
                   const SizedBox(height: 8),
 
-                  // 3. Underline Phone TextField with Formatter
+                  // 2. Underline Phone TextField with Formatter
                   CustomPhoneField(
                     onDigitsChanged: (digits) {
                       viewModel.setPhoneNumber(digits);
@@ -65,7 +61,7 @@ class RenaultPortLoginView extends StatelessWidget {
                   ),
                   const SizedBox(height: 12),
 
-                  // Error Message Observer
+                  // 3. Error Message Observer (Styled from Theme error color)
                   Observer(
                     builder: (_) {
                       if (viewModel.errorMessage != null) {
@@ -73,9 +69,9 @@ class RenaultPortLoginView extends StatelessWidget {
                           padding: const EdgeInsets.only(bottom: 8.0),
                           child: Text(
                             viewModel.errorMessage!,
-                            style: const TextStyle(
-                              color: Colors.red,
-                              fontSize: 13,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.error,
+                              fontWeight: FontWeight.w500,
                             ),
                           ),
                         );
@@ -86,7 +82,7 @@ class RenaultPortLoginView extends StatelessWidget {
 
                   const SizedBox(height: 28),
 
-                  // 4. Main Action Button: "Continue ➔" (Reactive Observer)
+                  // 4. Main Action Button: "Continue ➔" (Theme & Reactive Observer)
                   Observer(
                     builder: (_) {
                       final isEnabled = viewModel.isButtonEnabled;
@@ -97,11 +93,11 @@ class RenaultPortLoginView extends StatelessWidget {
                         child: ElevatedButton(
                           style: ElevatedButton.styleFrom(
                             backgroundColor: isEnabled
-                                ? const Color(0xFF0099E6)
-                                : const Color(0xFFEBECEF),
+                                ? theme.colorScheme.primary
+                                : theme.disabledColor.withValues(alpha: 0.12),
                             foregroundColor: isEnabled
-                                ? Colors.white
-                                : const Color(0xFF374151),
+                                ? theme.colorScheme.onPrimary
+                                : theme.colorScheme.onSurface.withValues(alpha: 0.38),
                             elevation: 0,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(10),
@@ -111,13 +107,14 @@ class RenaultPortLoginView extends StatelessWidget {
                               ? () => viewModel.submitLogin()
                               : null,
                           child: isLoading
-                              ? const SizedBox(
+                              ? SizedBox(
                                   width: 22,
                                   height: 22,
                                   child: CircularProgressIndicator(
                                     strokeWidth: 2.5,
-                                    valueColor:
-                                        AlwaysStoppedAnimation<Color>(Colors.white),
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                      theme.colorScheme.onPrimary,
+                                    ),
                                   ),
                                 )
                               : const Row(
@@ -141,18 +138,17 @@ class RenaultPortLoginView extends StatelessWidget {
 
                   const SizedBox(height: 24),
 
-                  // 5. "Skip For Now" Text Link (Centered Bottom Option)
+                  // 5. "Skip For Now" Text Link (Styled from Theme text)
                   Center(
                     child: TextButton(
                       onPressed: () {
                         // Skip action
                       },
-                      child: const Text(
+                      child: Text(
                         'Skip For Now',
-                        style: TextStyle(
-                          fontSize: 15,
+                        style: theme.textTheme.labelLarge?.copyWith(
                           fontWeight: FontWeight.bold,
-                          color: Color(0xFF1F2937),
+                          color: theme.colorScheme.onSurface,
                         ),
                       ),
                     ),
