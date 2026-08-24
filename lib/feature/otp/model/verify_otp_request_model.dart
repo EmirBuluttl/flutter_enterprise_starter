@@ -1,7 +1,7 @@
-/// Request body model matching POST /api/v1/customers/verifications/phone
+/// Request body model matching exact POST /api/v1/customers/verifications/phone schema
 class VerifyOtpRequestModel {
   final String phoneVerificationId;
-  final String code;
+  final dynamic code;
   final String notificationToken;
   final String? phone;
 
@@ -15,8 +15,6 @@ class VerifyOtpRequestModel {
   Map<String, dynamic> toJson() {
     return {
       'phoneVerificationId': phoneVerificationId,
-      'id': phoneVerificationId,
-      if (phone != null && phone!.isNotEmpty) 'phone': phone!.startsWith('90') ? phone : '90$phone',
       'code': code,
       'notificationToken': notificationToken,
     };
@@ -24,5 +22,5 @@ class VerifyOtpRequestModel {
 
   @override
   String toString() =>
-      'VerifyOtpRequestModel(phoneVerificationId: $phoneVerificationId, code: $code, phone: $phone)';
+      'VerifyOtpRequestModel(phoneVerificationId: $phoneVerificationId, code: $code)';
 }

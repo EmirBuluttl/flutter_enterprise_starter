@@ -6,7 +6,7 @@ import '../model/verify_otp_request_model.dart';
 import '../model/verify_otp_response_model.dart';
 import 'i_otp_service.dart';
 
-/// Concrete OTP Service communicating via Dio (POST request with strict manager payload schema)
+/// Concrete OTP Service communicating via Dio (POST request matching exact manager specification)
 class OtpService implements IOtpService {
   final Dio _dio;
 
@@ -16,8 +16,7 @@ class OtpService implements IOtpService {
   Future<VerifyOtpResponseModel> verifyOtp(VerifyOtpRequestModel request) async {
     final endpoint = AppConstants.phoneVerificationEndpoint;
 
-    // Payload exactly matching manager specification:
-    // { "phoneVerificationId": "...", "code": "...", "notificationToken": "" }
+    // Strict 3-key payload specified by manager
     final finalRequest = VerifyOtpRequestModel(
       phoneVerificationId: request.phoneVerificationId,
       code: request.code,
@@ -25,7 +24,7 @@ class OtpService implements IOtpService {
     );
 
     log('===============================================================');
-    log('🚀 [OTP SERVICE] POST Kodu Doğrula (HTTPS)');
+    log('🚀 [OTP SERVICE] POST Kodu Doğrula');
     log('🔑 phoneVerificationId: ${finalRequest.phoneVerificationId}');
     log('🔢 Kod: ${finalRequest.code}');
     log('📡 İstek URL: ${_dio.options.baseUrl}$endpoint');
@@ -40,7 +39,7 @@ class OtpService implements IOtpService {
     print('Payload: ${finalRequest.toJson()}');
 
     try {
-      final response = await _dio.post(
+      var response = await _dio.post(
         endpoint,
         data: finalRequest.toJson(),
       );
@@ -49,6 +48,28 @@ class OtpService implements IOtpService {
       print('[OtpService] -> REAL SERVER HTTP STATUS: ${response.statusCode}');
       // ignore: avoid_print
       print('[OtpService] -> REAL SERVER RESPONSE BODY: ${response.data}');
+
+      // If String code resulted in 401, try sending code as int
+      if (response.statusCode == 401 && request.code is String) {
+        final intCode = int.tryParse(request.code as String);
+        if (intCode != null) {
+          final altRequest = {
+            'phoneVerificationId': request.phoneVerificationId,
+            'code': intCode,
+            'notificationToken': request.notificationToken,
+          };
+          // ignore: avoid_print
+          print('[OtpService] 🔄 Retrying with integer code payload: $altRequest');
+          response = await _dio.post(
+            endpoint,
+            data: altRequest,
+          );
+          // ignore: avoid_print
+          print('[OtpService] -> RETRY HTTP STATUS: ${response.statusCode}');
+          // ignore: avoid_print
+          print('[OtpService] -> RETRY RESPONSE BODY: ${response.data}');
+        }
+      }
 
       if (response.data is Map<String, dynamic>) {
         final parsed = VerifyOtpResponseModel.fromJson(
