@@ -49,9 +49,11 @@ class AppConstants {
   AppConstants._();
 
   // ===========================================================================
-  // 🟢 GERÇEK AZURE STAGING HTTPS BASE URL
+  // 🟢 RESMİ RENAULT MAIS CANLI / STAGING PROD BASE URL & BRAND GUID
   // ===========================================================================
-  static const String baseUrl = 'https://port-api-main-v2-staging.azurewebsites.net';
+  static const String baseUrl = 'https://renaultportapi.mais.com.tr';
+  static const String renaultBrandId = 'c2e9b958-7108-4185-bf31-e87171fc267f';
+  static const String appVersion = '2.2.5';
 
   // Endpoint
   static const String phoneVerificationEndpoint = '/api/v1/customers/verifications/phone';

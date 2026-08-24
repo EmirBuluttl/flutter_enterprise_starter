@@ -3,7 +3,7 @@ import 'package:dio/dio.dart';
 import '../../constants/app_constants.dart';
 import 'core_interceptor.dart';
 
-/// Singleton Network Manager wrapping Dio client with redirect, SSL & Azure Cookie Session support
+/// Singleton Network Manager wrapping Dio client with official Renault MAIS headers & session support
 class NetworkManager {
   static NetworkManager? _instance;
   static NetworkManager get instance => _instance ??= NetworkManager._init();
@@ -23,6 +23,13 @@ class NetworkManager {
       headers: {
         'Accept': 'application/json',
         'Content-Type': 'application/json',
+        'brand': AppConstants.renaultBrandId,
+        'app-version': AppConstants.appVersion,
+        'x-lang': 'tr',
+        'device-os': 'android',
+        'device-model': 'sdk_gphone16k_x86_64',
+        'device-os-version': '16',
+        'device-id': 'renault_port_device_test_01',
       },
     );
 
@@ -49,12 +56,11 @@ class _AzureSessionCookieInterceptor extends Interceptor {
   void onResponse(Response response, ResponseInterceptorHandler handler) {
     final setCookieHeader = response.headers['set-cookie'];
     if (setCookieHeader != null && setCookieHeader.isNotEmpty) {
-      // Extract cookie strings before semicolon (e.g., ARRAffinity=...; ARRAffinitySameSite=...)
       final parsedCookies = setCookieHeader
           .map((cookieStr) => cookieStr.split(';').first.trim())
           .join('; ');
       _savedCookies = parsedCookies;
-      log('🍪 [SESSION INTERCEPTOR] Saved Azure Session Cookie: $_savedCookies');
+      log('🍪 [SESSION INTERCEPTOR] Saved Session Cookie: $_savedCookies');
     }
     handler.next(response);
   }
