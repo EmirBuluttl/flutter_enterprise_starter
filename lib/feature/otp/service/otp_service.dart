@@ -6,7 +6,7 @@ import '../model/verify_otp_request_model.dart';
 import '../model/verify_otp_response_model.dart';
 import 'i_otp_service.dart';
 
-/// Concrete OTP Service communicating via Dio (with trailing slash 301 redirect prevention)
+/// Concrete OTP Service communicating via Dio (with multi-pattern Azure API fallbacks)
 class OtpService implements IOtpService {
   final Dio _dio;
 
@@ -14,36 +14,35 @@ class OtpService implements IOtpService {
 
   @override
   Future<VerifyOtpResponseModel> verifyOtp(VerifyOtpRequestModel request) async {
-    // Test both standard endpoint and trailing-slash endpoint
-    final baseEndpoint = AppConstants.phoneVerificationEndpoint;
-    final trailingSlashEndpoint = '$baseEndpoint/';
+    final endpoint = AppConstants.phoneVerificationEndpoint;
 
-    final finalRequest = VerifyOtpRequestModel(
-      phoneVerificationId: request.phoneVerificationId,
-      code: request.code,
-      notificationToken: request.notificationToken,
-    );
+    final basePayload = {
+      'id': request.phoneVerificationId,
+      'phoneVerificationId': request.phoneVerificationId,
+      'code': request.code,
+      'notificationToken': request.notificationToken,
+    };
 
     log('===============================================================');
     log('🚀 [OTP SERVICE] POST Kodu Doğrula');
-    log('🔑 phoneVerificationId: ${finalRequest.phoneVerificationId}');
-    log('🔢 Kod: ${finalRequest.code}');
-    log('📡 İstek URL: ${_dio.options.baseUrl}$baseEndpoint');
-    log('📦 Payload: ${finalRequest.toJson()}');
+    log('🔑 phoneVerificationId: ${request.phoneVerificationId}');
+    log('🔢 Kod: ${request.code}');
+    log('📡 İstek URL: ${_dio.options.baseUrl}$endpoint');
+    log('📦 Payload: $basePayload');
     log('===============================================================');
 
     // ignore: avoid_print
     print('---------------------------------------------------------------');
     // ignore: avoid_print
-    print('[OtpService] -> POST İstek Gönderiliyor: ${_dio.options.baseUrl}$baseEndpoint');
+    print('[OtpService] -> POST İstek Gönderiliyor: ${_dio.options.baseUrl}$endpoint');
     // ignore: avoid_print
-    print('Payload: ${finalRequest.toJson()}');
+    print('Payload: $basePayload');
 
     try {
-      // 1. Try direct POST to base endpoint
+      // Pattern 1: Standard POST with combined JSON body
       var response = await _dio.post(
-        baseEndpoint,
-        data: finalRequest.toJson(),
+        endpoint,
+        data: basePayload,
       );
 
       // ignore: avoid_print
@@ -51,22 +50,47 @@ class OtpService implements IOtpService {
       // ignore: avoid_print
       print('[OtpService] -> REAL SERVER RESPONSE BODY: ${response.data}');
 
-      // If HTTP 401 occurs, try with trailing slash '/' to prevent Azure 301 method drop
+      // Pattern 2: If 401, try query parameters on POST (e.g. ?phoneVerificationId=...&code=...)
       if (response.statusCode == 401) {
         // ignore: avoid_print
-        print('[OtpService] 🔄 401 Detected! Retrying with trailing slash: ${_dio.options.baseUrl}$trailingSlashEndpoint');
+        print('[OtpService] 🔄 Pattern 2 Retry: Sending query parameters on POST...');
         try {
           response = await _dio.post(
-            trailingSlashEndpoint,
-            data: finalRequest.toJson(),
+            endpoint,
+            queryParameters: {
+              'phoneVerificationId': request.phoneVerificationId,
+              'id': request.phoneVerificationId,
+              'code': request.code,
+            },
+            data: basePayload,
           );
           // ignore: avoid_print
-          print('[OtpService] -> TRAILING SLASH HTTP STATUS: ${response.statusCode}');
+          print('[OtpService] -> QUERY PARAM RETRY HTTP STATUS: ${response.statusCode}');
           // ignore: avoid_print
-          print('[OtpService] -> TRAILING SLASH RESPONSE BODY: ${response.data}');
-        } catch (slashErr) {
+          print('[OtpService] -> QUERY PARAM RETRY RESPONSE BODY: ${response.data}');
+        } catch (qErr) {
           // ignore: avoid_print
-          print('[OtpService] -> TRAILING SLASH ERROR: $slashErr');
+          print('[OtpService] -> QUERY PARAM RETRY ERROR: $qErr');
+        }
+      }
+
+      // Pattern 3: If 401, try path parameter (e.g. /phone/{id})
+      if (response.statusCode == 401) {
+        final pathEndpoint = '$endpoint/${request.phoneVerificationId}';
+        // ignore: avoid_print
+        print('[OtpService] 🔄 Pattern 3 Retry: Path parameter endpoint: $pathEndpoint...');
+        try {
+          response = await _dio.post(
+            pathEndpoint,
+            data: {'code': request.code, 'notificationToken': request.notificationToken},
+          );
+          // ignore: avoid_print
+          print('[OtpService] -> PATH PARAM RETRY HTTP STATUS: ${response.statusCode}');
+          // ignore: avoid_print
+          print('[OtpService] -> PATH PARAM RETRY RESPONSE BODY: ${response.data}');
+        } catch (pErr) {
+          // ignore: avoid_print
+          print('[OtpService] -> PATH PARAM RETRY ERROR: $pErr');
         }
       }
 
