@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_mobx/flutter_mobx.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../product/theme/theme_view_model.dart';
-import '../../login/view/login_view.dart';
+import '../../login/view/renault_port_login_view.dart';
 
 /// Renault Port Home / Dashboard View
 class HomeView extends StatelessWidget {
@@ -54,9 +54,11 @@ class HomeView extends StatelessWidget {
             tooltip: AppStrings.logoutButtonText,
             icon: const Icon(Icons.logout_rounded),
             onPressed: () {
+              // Return to RenaultPortLoginView and clear navigation stack
               Navigator.pushAndRemoveUntil(
                 context,
-                MaterialPageRoute(builder: (context) => const LoginView()),
+                MaterialPageRoute(
+                    builder: (context) => const RenaultPortLoginView()),
                 (route) => false,
               );
             },

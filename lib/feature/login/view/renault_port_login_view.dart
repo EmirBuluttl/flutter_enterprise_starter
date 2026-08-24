@@ -44,7 +44,7 @@ class RenaultPortLoginView extends StatelessWidget {
                     child: RenaultLogo(size: 80),
                   ),
 
-                  const SizedBox(height: 90),
+                  const SizedBox(height: 50),
 
                   // 2. Label: "Your phone number" (Sky Blue Accent)
                   const Text(
