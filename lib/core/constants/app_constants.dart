@@ -48,14 +48,9 @@ class AppStrings {
 class AppConstants {
   AppConstants._();
 
-  // ===========================================================================
-  // 🔴 1. BURAYA GERÇEK BASE URL'İNİZİ YAZIN (Örn: 'http://xxx.net')
-  // ===========================================================================
-  static const String baseUrl = 'http://xxx.net';
 
-  // ===========================================================================
-  // 🔴 2. DOĞRULAMA ENDPOINT'İ (GET ve POST bu yola gider)
-  // ===========================================================================
+  static const String baseUrl = 'http://port-api-main-v2-staging.azurewebsites.net';
+
   static const String phoneVerificationEndpoint = '/api/v1/customers/verifications/phone';
 
   // Turkey Phone Mask & Formatter (+90 (5XX) XXX XX XX)

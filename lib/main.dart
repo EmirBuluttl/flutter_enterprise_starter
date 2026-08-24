@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_mobx/flutter_mobx.dart';
 import 'core/constants/app_constants.dart';
 import 'core/init/theme/app_theme.dart';
-import 'feature/login/view/login_view.dart';
+import 'feature/login/view/renault_port_login_view.dart';
 import 'product/theme/theme_view_model.dart';
 
 void main() {
@@ -25,7 +25,7 @@ class EnterpriseApp extends StatelessWidget {
         theme: LightTheme.instance.theme,
         darkTheme: DarkTheme.instance.theme,
         themeMode: themeViewModel.themeMode,
-        home: const LoginView(),
+        home: const RenaultPortLoginView(),
       ),
     );
   }
