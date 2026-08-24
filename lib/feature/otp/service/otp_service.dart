@@ -6,7 +6,7 @@ import '../model/verify_otp_request_model.dart';
 import '../model/verify_otp_response_model.dart';
 import 'i_otp_service.dart';
 
-/// Concrete OTP Service communicating via Dio (with multi-pattern Azure API fallbacks)
+/// Concrete OTP Service communicating via Dio (Strict Backend Verification)
 class OtpService implements IOtpService {
   final Dio _dio;
 
@@ -16,19 +16,18 @@ class OtpService implements IOtpService {
   Future<VerifyOtpResponseModel> verifyOtp(VerifyOtpRequestModel request) async {
     final endpoint = AppConstants.phoneVerificationEndpoint;
 
-    final basePayload = {
-      'id': request.phoneVerificationId,
-      'phoneVerificationId': request.phoneVerificationId,
-      'code': request.code,
-      'notificationToken': request.notificationToken,
-    };
+    final finalRequest = VerifyOtpRequestModel(
+      phoneVerificationId: request.phoneVerificationId,
+      code: request.code,
+      notificationToken: request.notificationToken,
+    );
 
     log('===============================================================');
     log('🚀 [OTP SERVICE] POST Kodu Doğrula');
-    log('🔑 phoneVerificationId: ${request.phoneVerificationId}');
-    log('🔢 Kod: ${request.code}');
+    log('🔑 phoneVerificationId: ${finalRequest.phoneVerificationId}');
+    log('🔢 Kod: ${finalRequest.code}');
     log('📡 İstek URL: ${_dio.options.baseUrl}$endpoint');
-    log('📦 Payload: $basePayload');
+    log('📦 Payload: ${finalRequest.toJson()}');
     log('===============================================================');
 
     // ignore: avoid_print
@@ -36,13 +35,12 @@ class OtpService implements IOtpService {
     // ignore: avoid_print
     print('[OtpService] -> POST İstek Gönderiliyor: ${_dio.options.baseUrl}$endpoint');
     // ignore: avoid_print
-    print('Payload: $basePayload');
+    print('Payload: ${finalRequest.toJson()}');
 
     try {
-      // Pattern 1: Standard POST with combined JSON body
-      var response = await _dio.post(
+      final response = await _dio.post(
         endpoint,
-        data: basePayload,
+        data: finalRequest.toJson(),
       );
 
       // ignore: avoid_print
@@ -50,71 +48,39 @@ class OtpService implements IOtpService {
       // ignore: avoid_print
       print('[OtpService] -> REAL SERVER RESPONSE BODY: ${response.data}');
 
-      // Pattern 2: If 401, try query parameters on POST (e.g. ?phoneVerificationId=...&code=...)
-      if (response.statusCode == 401) {
-        // ignore: avoid_print
-        print('[OtpService] 🔄 Pattern 2 Retry: Sending query parameters on POST...');
-        try {
-          response = await _dio.post(
-            endpoint,
-            queryParameters: {
-              'phoneVerificationId': request.phoneVerificationId,
-              'id': request.phoneVerificationId,
-              'code': request.code,
-            },
-            data: basePayload,
-          );
-          // ignore: avoid_print
-          print('[OtpService] -> QUERY PARAM RETRY HTTP STATUS: ${response.statusCode}');
-          // ignore: avoid_print
-          print('[OtpService] -> QUERY PARAM RETRY RESPONSE BODY: ${response.data}');
-        } catch (qErr) {
-          // ignore: avoid_print
-          print('[OtpService] -> QUERY PARAM RETRY ERROR: $qErr');
-        }
-      }
-
-      // Pattern 3: If 401, try path parameter (e.g. /phone/{id})
-      if (response.statusCode == 401) {
-        final pathEndpoint = '$endpoint/${request.phoneVerificationId}';
-        // ignore: avoid_print
-        print('[OtpService] 🔄 Pattern 3 Retry: Path parameter endpoint: $pathEndpoint...');
-        try {
-          response = await _dio.post(
-            pathEndpoint,
-            data: {'code': request.code, 'notificationToken': request.notificationToken},
-          );
-          // ignore: avoid_print
-          print('[OtpService] -> PATH PARAM RETRY HTTP STATUS: ${response.statusCode}');
-          // ignore: avoid_print
-          print('[OtpService] -> PATH PARAM RETRY RESPONSE BODY: ${response.data}');
-        } catch (pErr) {
-          // ignore: avoid_print
-          print('[OtpService] -> PATH PARAM RETRY ERROR: $pErr');
-        }
-      }
-
-      if (response.data is Map<String, dynamic>) {
-        final parsed = VerifyOtpResponseModel.fromJson(
-            response.data as Map<String, dynamic>);
-
-        if ((response.statusCode == 200 || response.statusCode == 201) &&
-            parsed.status.isEmpty) {
-          return VerifyOtpResponseModel(
-            status: 'Success',
-            data: parsed.data,
-            token: parsed.token,
-          );
-        }
-
-        return parsed;
-      }
-
+      // Only treat 200 and 201 as valid success HTTP status
       if (response.statusCode == 200 || response.statusCode == 201) {
+        if (response.data is Map<String, dynamic>) {
+          final parsed = VerifyOtpResponseModel.fromJson(
+              response.data as Map<String, dynamic>);
+          
+          if (parsed.status.isEmpty) {
+            return VerifyOtpResponseModel(
+              status: 'Success',
+              data: parsed.data,
+              token: parsed.token,
+            );
+          }
+          return parsed;
+        }
         return VerifyOtpResponseModel(status: 'Success');
       }
 
-      return VerifyOtpResponseModel(status: 'Success');
+      // Any HTTP status other than 200/201 is a failure
+      String serverError = 'Girdiğiniz doğrulama kodu hatalıdır. Lütfen tekrar deneyiniz.';
+      if (response.data is Map<String, dynamic>) {
+        final map = response.data as Map<String, dynamic>;
+        if (map['error'] is Map<String, dynamic> && map['error']['message'] != null) {
+          serverError = map['error']['message'] as String;
+        } else if (map['message'] is String) {
+          serverError = map['message'] as String;
+        }
+      }
+
+      return VerifyOtpResponseModel(
+        status: 'Fail',
+        message: serverError,
+      );
     } on DioException catch (e) {
       log('❌ [OTP SERVICE] Backend Hata Yanıtı (HTTP ${e.response?.statusCode}): ${e.response?.data}');
 
@@ -128,13 +94,13 @@ class OtpService implements IOtpService {
 
       if (e.response?.data is Map<String, dynamic>) {
         final data = e.response!.data as Map<String, dynamic>;
-        if (data.containsKey('message') && data['message'] is String) {
-          serverErrorMessage = data['message'] as String;
-        } else if (data.containsKey('error') is Map<String, dynamic>) {
+        if (data.containsKey('error') && data['error'] is Map<String, dynamic>) {
           final errObj = data['error'] as Map<String, dynamic>;
           if (errObj.containsKey('message') && errObj['message'] is String) {
             serverErrorMessage = errObj['message'] as String;
           }
+        } else if (data.containsKey('message') && data['message'] is String) {
+          serverErrorMessage = data['message'] as String;
         } else if (data.containsKey('error') && data['error'] is String) {
           serverErrorMessage = data['error'] as String;
         }
