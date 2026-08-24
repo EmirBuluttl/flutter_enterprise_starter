@@ -12,13 +12,23 @@ class VerifyOtpResponseModel {
     this.data,
   });
 
-  bool get isSuccess =>
-      status.toLowerCase() == 'success' || status.toLowerCase() == 'ok';
+  bool get isSuccess {
+    final lower = status.toLowerCase();
+    return lower == 'success' ||
+        lower == 'ok' ||
+        lower == 'true' ||
+        (status.isEmpty && data != null);
+  }
 
   factory VerifyOtpResponseModel.fromJson(Map<String, dynamic> json) {
+    String parsedStatus = json['status'] as String? ?? '';
+    if (parsedStatus.isEmpty && json['success'] == true) {
+      parsedStatus = 'Success';
+    }
+
     return VerifyOtpResponseModel(
-      status: json['status'] as String? ?? (json['success'] == true ? 'Success' : ''),
-      message: json['message'] as String?,
+      status: parsedStatus,
+      message: json['message'] as String? ?? json['error'] as String?,
       token: json['token'] as String? ?? json['accessToken'] as String?,
       data: json['data'] is Map<String, dynamic>
           ? json['data'] as Map<String, dynamic>

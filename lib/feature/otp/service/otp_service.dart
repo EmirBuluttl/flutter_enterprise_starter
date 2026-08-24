@@ -6,7 +6,7 @@ import '../model/verify_otp_request_model.dart';
 import '../model/verify_otp_response_model.dart';
 import 'i_otp_service.dart';
 
-/// Concrete OTP Service communicating via Dio (POST request with strict error handling)
+/// Concrete OTP Service communicating via Dio (POST request with rich diagnostic logging)
 class OtpService implements IOtpService {
   final Dio _dio;
 
@@ -16,13 +16,10 @@ class OtpService implements IOtpService {
   Future<VerifyOtpResponseModel> verifyOtp(VerifyOtpRequestModel request) async {
     final endpoint = AppConstants.phoneVerificationEndpoint;
 
-    // Ensure notificationToken is not empty string for backend validation
     final finalRequest = VerifyOtpRequestModel(
       phoneVerificationId: request.phoneVerificationId,
       code: request.code,
-      notificationToken: request.notificationToken.isNotEmpty
-          ? request.notificationToken
-          : 'test_fcm_token_renault_port_device_01',
+      notificationToken: request.notificationToken,
     );
 
     log('===============================================================');
@@ -33,24 +30,56 @@ class OtpService implements IOtpService {
     log('📦 Payload: ${finalRequest.toJson()}');
     log('===============================================================');
 
+    // ignore: avoid_print
+    print('---------------------------------------------------------------');
+    // ignore: avoid_print
+    print('[OtpService] -> POST İstek Gönderiliyor:');
+    // ignore: avoid_print
+    print('Payload: ${finalRequest.toJson()}');
+
     try {
       final response = await _dio.post(
         endpoint,
         data: finalRequest.toJson(),
       );
 
+      // ignore: avoid_print
+      print('[OtpService] -> REAL SERVER HTTP STATUS: ${response.statusCode}');
+      // ignore: avoid_print
+      print('[OtpService] -> REAL SERVER RESPONSE BODY: ${response.data}');
+
       if (response.data is Map<String, dynamic>) {
         final parsed = VerifyOtpResponseModel.fromJson(
             response.data as Map<String, dynamic>);
+
+        // If HTTP status is 200/201 OK, treat as success even if status field is missing
+        if ((response.statusCode == 200 || response.statusCode == 201) &&
+            parsed.status.isEmpty) {
+          return VerifyOtpResponseModel(
+            status: 'Success',
+            data: parsed.data,
+            token: parsed.token,
+          );
+        }
+
         return parsed;
+      }
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return VerifyOtpResponseModel(status: 'Success');
       }
 
       return VerifyOtpResponseModel(status: 'Success');
     } on DioException catch (e) {
-      log('❌ [OTP SERVICE] Backend Doğrulama Hatası (HTTP ${e.response?.statusCode}): ${e.message}');
+      log('❌ [OTP SERVICE] Backend Hata Yanıtı (HTTP ${e.response?.statusCode}): ${e.response?.data}');
+
+      // ignore: avoid_print
+      print('[OtpService] -> ERROR HTTP STATUS: ${e.response?.statusCode}');
+      // ignore: avoid_print
+      print('[OtpService] -> ERROR RESPONSE DATA: ${e.response?.data}');
 
       String serverErrorMessage =
-          'Girdiğiniz doğrulama kodu hatalıdır. Lütfen kontrol edip tekrar deneyiniz.';
+          'Girdiğiniz doğrulama kodu hatalıdır. Lütfen tekrar deneyiniz.';
 
       if (e.response?.data is Map<String, dynamic>) {
         final data = e.response!.data as Map<String, dynamic>;
