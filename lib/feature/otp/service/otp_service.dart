@@ -49,26 +49,23 @@ class OtpService implements IOtpService {
       // ignore: avoid_print
       print('[OtpService] -> REAL SERVER RESPONSE BODY: ${response.data}');
 
-      // If String code resulted in 401, try sending code as int
-      if (response.statusCode == 401 && request.code is String) {
-        final intCode = int.tryParse(request.code as String);
-        if (intCode != null) {
-          final altRequest = {
-            'phoneVerificationId': request.phoneVerificationId,
-            'code': intCode,
-            'notificationToken': request.notificationToken,
-          };
-          // ignore: avoid_print
-          print('[OtpService] 🔄 Retrying with integer code payload: $altRequest');
-          response = await _dio.post(
-            endpoint,
-            data: altRequest,
-          );
-          // ignore: avoid_print
-          print('[OtpService] -> RETRY HTTP STATUS: ${response.statusCode}');
-          // ignore: avoid_print
-          print('[OtpService] -> RETRY RESPONSE BODY: ${response.data}');
-        }
+      // If HTTP 401 occurs, try sending phoneVerificationId as Bearer token in Authorization header
+      if (response.statusCode == 401) {
+        // ignore: avoid_print
+        print('[OtpService] 🔄 401 Detected! Retrying with Bearer phoneVerificationId header...');
+        response = await _dio.post(
+          endpoint,
+          data: finalRequest.toJson(),
+          options: Options(
+            headers: {
+              'Authorization': 'Bearer ${request.phoneVerificationId}',
+            },
+          ),
+        );
+        // ignore: avoid_print
+        print('[OtpService] -> BEARER RETRY HTTP STATUS: ${response.statusCode}');
+        // ignore: avoid_print
+        print('[OtpService] -> BEARER RETRY RESPONSE BODY: ${response.data}');
       }
 
       if (response.data is Map<String, dynamic>) {
