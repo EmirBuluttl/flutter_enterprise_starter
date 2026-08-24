@@ -4,7 +4,7 @@ import '../../../core/base/view/base_view.dart';
 import '../../../product/widgets/custom_phone_field.dart';
 import '../view_model/login_view_model.dart';
 
-/// Renault Port Phone Input Screen strictly bound to Theme.of(context) & AppTheme
+
 class RenaultPortLoginView extends StatelessWidget {
   const RenaultPortLoginView({super.key});
 
@@ -43,7 +43,7 @@ class RenaultPortLoginView extends StatelessWidget {
                 children: [
                   const SizedBox(height: 32),
 
-                  // 1. Label: "Your phone number" (Styled from Theme primary color)
+                  
                   Text(
                     'Your phone number',
                     style: theme.textTheme.titleMedium?.copyWith(
@@ -53,7 +53,7 @@ class RenaultPortLoginView extends StatelessWidget {
                   ),
                   const SizedBox(height: 8),
 
-                  // 2. Underline Phone TextField with Formatter
+                  
                   CustomPhoneField(
                     onDigitsChanged: (digits) {
                       viewModel.setPhoneNumber(digits);
@@ -61,7 +61,7 @@ class RenaultPortLoginView extends StatelessWidget {
                   ),
                   const SizedBox(height: 12),
 
-                  // 3. Error Message Observer (Styled from Theme error color)
+                  
                   Observer(
                     builder: (_) {
                       if (viewModel.errorMessage != null) {
@@ -82,7 +82,7 @@ class RenaultPortLoginView extends StatelessWidget {
 
                   const SizedBox(height: 28),
 
-                  // 4. Main Action Button: "Continue ➔" (Theme & Reactive Observer)
+                  
                   Observer(
                     builder: (_) {
                       final isEnabled = viewModel.isButtonEnabled;
@@ -138,11 +138,11 @@ class RenaultPortLoginView extends StatelessWidget {
 
                   const SizedBox(height: 24),
 
-                  // 5. "Skip For Now" Text Link (Styled from Theme text)
+                  
                   Center(
                     child: TextButton(
                       onPressed: () {
-                        // Skip action
+                        
                       },
                       child: Text(
                         'Skip For Now',

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_mobx/flutter_mobx.dart';
@@ -30,15 +31,12 @@ class OtpView extends StatelessWidget {
       onModelReady: (model) {
         model.init();
       },
-      onDispose: () {
-        // Handled in BaseView
-      },
       onPageBuilder: (context, viewModel) {
         final theme = Theme.of(context);
 
         return Scaffold(
           appBar: AppBar(
-            title: Text(AppStrings.appTitle),
+            title: const Text(AppStrings.appTitle),
             centerTitle: false,
             actions: [
               Observer(
@@ -67,7 +65,7 @@ class OtpView extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.center,
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      // Header Component (Stateless)
+                      // Header Component
                       _OtpHeader(phoneNumber: phoneNumber),
                       const SizedBox(height: 32),
 
@@ -78,11 +76,14 @@ class OtpView extends StatelessWidget {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
-                              // 4-Digit OTP PIN Input Boxes (Stateless)
-                              _OtpPinInput(
-                                onCodeChanged: (code) {
-                                  viewModel.setOtpCode(code);
-                                },
+                              // 4-Digit OTP PIN Input Boxes with Focus Glow & Cursor Blink
+                              Observer(
+                                builder: (_) => _OtpPinInput(
+                                  hasError: viewModel.errorMessage != null,
+                                  onCodeChanged: (code) {
+                                    viewModel.setOtpCode(code);
+                                  },
+                                ),
                               ),
                               const SizedBox(height: 20),
 
@@ -97,8 +98,9 @@ class OtpView extends StatelessWidget {
                                             style: TextStyle(
                                               fontSize: 13,
                                               color: theme.colorScheme.error,
-                                              fontWeight: FontWeight.w500,
+                                              fontWeight: FontWeight.w600,
                                             ),
+                                            textAlign: TextAlign.center,
                                           ),
                                         ),
                                       )
@@ -173,9 +175,7 @@ class _OtpHeader extends StatelessWidget {
           child: Icon(
             Icons.sms_outlined,
             size: 36,
-            color: theme.brightness == Brightness.dark
-                ? theme.colorScheme.primary
-                : const Color(0xFFB45309),
+            color: theme.colorScheme.primary,
           ),
         ),
         const SizedBox(height: 20),
@@ -207,11 +207,15 @@ class _OtpHeader extends StatelessWidget {
   }
 }
 
-/// Stateless 4-Digit OTP PIN Input Field
+/// Enhanced 4-Digit OTP PIN Input Field with Blinking Cursor & Active Glow
 class _OtpPinInput extends StatefulWidget {
   final ValueChanged<String> onCodeChanged;
+  final bool hasError;
 
-  const _OtpPinInput({required this.onCodeChanged});
+  const _OtpPinInput({
+    required this.onCodeChanged,
+    this.hasError = false,
+  });
 
   @override
   State<_OtpPinInput> createState() => _OtpPinInputState();
@@ -220,9 +224,25 @@ class _OtpPinInput extends StatefulWidget {
 class _OtpPinInputState extends State<_OtpPinInput> {
   final TextEditingController _controller = TextEditingController();
   final FocusNode _focusNode = FocusNode();
+  Timer? _cursorTimer;
+  bool _showCursor = true;
+
+  @override
+  void initState() {
+    super.initState();
+    // Blinking cursor timer every 500ms
+    _cursorTimer = Timer.periodic(const Duration(milliseconds: 500), (timer) {
+      if (mounted && _focusNode.hasFocus) {
+        setState(() {
+          _showCursor = !_showCursor;
+        });
+      }
+    });
+  }
 
   @override
   void dispose() {
+    _cursorTimer?.cancel();
     _controller.dispose();
     _focusNode.dispose();
     super.dispose();
@@ -255,7 +275,7 @@ class _OtpPinInputState extends State<_OtpPinInput> {
           ),
         ),
 
-        // 4 Visual PIN boxes
+        // 4 Visual PIN boxes with Active Focus Glow & Blinking Cursor
         GestureDetector(
           onTap: () {
             _focusNode.requestFocus();
@@ -267,31 +287,58 @@ class _OtpPinInputState extends State<_OtpPinInput> {
               final digit = index < text.length ? text[index] : '';
               final isFocused = index == text.length && _focusNode.hasFocus;
 
+              BoxBorder border;
+              Color fillColor;
+
+              if (widget.hasError) {
+                border = Border.all(color: theme.colorScheme.error, width: 2.0);
+                fillColor = theme.colorScheme.error.withValues(alpha: 0.06);
+              } else if (isFocused) {
+                border = Border.all(color: theme.colorScheme.primary, width: 2.5);
+                fillColor = theme.colorScheme.primary.withValues(alpha: 0.10);
+              } else if (digit.isNotEmpty) {
+                border = Border.all(
+                  color: theme.colorScheme.primary.withValues(alpha: 0.6),
+                  width: 1.5,
+                );
+                fillColor = theme.colorScheme.surface;
+              } else {
+                border = Border.all(
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.2),
+                  width: 1.2,
+                );
+                fillColor = theme.colorScheme.surface;
+              }
+
               return AnimatedContainer(
                 duration: const Duration(milliseconds: 150),
                 width: 58,
                 height: 64,
                 decoration: BoxDecoration(
-                  color: theme.colorScheme.surface,
+                  color: fillColor,
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: isFocused
-                        ? theme.colorScheme.primary
-                        : digit.isNotEmpty
-                            ? theme.colorScheme.primary.withValues(alpha: 0.6)
-                            : theme.colorScheme.onSurface.withValues(alpha: 0.2),
-                    width: isFocused ? 2.0 : 1.2,
-                  ),
+                  border: border,
                 ),
                 child: Center(
-                  child: Text(
-                    digit,
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: theme.colorScheme.onSurface,
-                    ),
-                  ),
+                  child: digit.isNotEmpty
+                      ? Text(
+                          digit,
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: theme.colorScheme.onSurface,
+                          ),
+                        )
+                      : (isFocused && _showCursor
+                          ? Text(
+                              '|',
+                              style: TextStyle(
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                                color: theme.colorScheme.primary,
+                              ),
+                            )
+                          : const SizedBox.shrink()),
                 ),
               );
             }),
@@ -354,7 +401,7 @@ class _ResendTimerSection extends StatelessWidget {
           const SizedBox(width: 6),
           Text(
             '${AppStrings.resendCountdownText}$countdownText',
-            style: theme.textTheme.bodyMedium?.copyWith(
+            style: theme.textTheme.bodySmall?.copyWith(
               fontWeight: FontWeight.w500,
               color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
             ),

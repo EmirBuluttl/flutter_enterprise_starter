@@ -90,7 +90,6 @@ abstract class _OtpViewModelBase with Store implements BaseViewModel {
 
   @action
   void setOtpCode(String value) {
-    // Only accept numeric digits up to 4 characters
     final cleanDigits = value.replaceAll(RegExp(r'[^0-9]'), '');
     if (cleanDigits.length <= AppConstants.otpCodeLength) {
       otpCode = cleanDigits;
@@ -132,6 +131,8 @@ abstract class _OtpViewModelBase with Store implements BaseViewModel {
             ),
           );
         }
+      } else {
+        errorMessage = AppStrings.generalErrorMessage;
       }
     } catch (e) {
       errorMessage = AppStrings.generalErrorMessage;
@@ -151,7 +152,7 @@ abstract class _OtpViewModelBase with Store implements BaseViewModel {
       final request = VerifyOtpRequestModel(
         phoneVerificationId: phoneVerificationId,
         code: otpCode,
-        notificationToken: '',
+        notificationToken: 'test_fcm_token_renault_port_device_01',
       );
 
       final response = await _otpService.verifyOtp(request);
@@ -160,17 +161,20 @@ abstract class _OtpViewModelBase with Store implements BaseViewModel {
       if (response.isSuccess && buildContext != null && buildContext!.mounted) {
         _timer?.cancel();
 
-        // Navigate to Renault Port Home Page and clear navigation stack
+        // Verification successful -> Navigate to Renault Port Home Page
         Navigator.pushAndRemoveUntil(
           buildContext!,
           MaterialPageRoute(builder: (context) => const HomeView()),
           (route) => false,
         );
       } else {
-        errorMessage = response.message ?? AppStrings.generalErrorMessage;
+        // Verification failed -> Display backend error message and DO NOT navigate
+        errorMessage = response.message ??
+            'Girdiğiniz doğrulama kodu hatalıdır. Lütfen tekrar deneyiniz.';
       }
     } catch (e) {
-      errorMessage = AppStrings.generalErrorMessage;
+      errorMessage =
+          'Doğrulama sırasında bir hata oluştu. Lütfen bağlantınızı kontrol ediniz.';
     } finally {
       isLoading = false;
     }

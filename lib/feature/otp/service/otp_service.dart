@@ -6,7 +6,7 @@ import '../model/verify_otp_request_model.dart';
 import '../model/verify_otp_response_model.dart';
 import 'i_otp_service.dart';
 
-/// Concrete OTP Service communicating via Dio (POST request)
+/// Concrete OTP Service communicating via Dio (POST request with strict error handling)
 class OtpService implements IOtpService {
   final Dio _dio;
 
@@ -16,38 +16,61 @@ class OtpService implements IOtpService {
   Future<VerifyOtpResponseModel> verifyOtp(VerifyOtpRequestModel request) async {
     final endpoint = AppConstants.phoneVerificationEndpoint;
 
-    log('===============================================================');
-    log('🚀 [OTP SERVICE] POST Doğrulama Kodu Gönderiliyor');
-    log('🔑 phoneVerificationId: ${request.phoneVerificationId}');
-    log('🔢 Kod: ${request.code}');
-    log('📡 İstek URL: ${_dio.options.baseUrl}$endpoint');
-    log('📦 Payload: ${request.toJson()}');
-    log('===============================================================');
+    // Ensure notificationToken is not empty string for backend validation
+    final finalRequest = VerifyOtpRequestModel(
+      phoneVerificationId: request.phoneVerificationId,
+      code: request.code,
+      notificationToken: request.notificationToken.isNotEmpty
+          ? request.notificationToken
+          : 'test_fcm_token_renault_port_device_01',
+    );
 
-    // ignore: avoid_print
-    print('[OtpService] -> POST Kod doğrulanıyor: ${request.code}');
+    log('===============================================================');
+    log('🚀 [OTP SERVICE] POST Kodu Doğrula');
+    log('🔑 phoneVerificationId: ${finalRequest.phoneVerificationId}');
+    log('🔢 Kod: ${finalRequest.code}');
+    log('📡 İstek URL: ${_dio.options.baseUrl}$endpoint');
+    log('📦 Payload: ${finalRequest.toJson()}');
+    log('===============================================================');
 
     try {
       final response = await _dio.post(
         endpoint,
-        data: request.toJson(),
+        data: finalRequest.toJson(),
       );
 
       if (response.data is Map<String, dynamic>) {
-        return VerifyOtpResponseModel.fromJson(
+        final parsed = VerifyOtpResponseModel.fromJson(
             response.data as Map<String, dynamic>);
+        return parsed;
       }
 
       return VerifyOtpResponseModel(status: 'Success');
-    } catch (e) {
-      log('⚠️ [OTP SERVICE] Gerçek API bağlantısı sırasında hata: $e');
+    } on DioException catch (e) {
+      log('❌ [OTP SERVICE] Backend Doğrulama Hatası (HTTP ${e.response?.statusCode}): ${e.message}');
 
-      // Test fallback
-      await Future.delayed(const Duration(milliseconds: 1000));
+      String serverErrorMessage =
+          'Girdiğiniz doğrulama kodu hatalıdır. Lütfen kontrol edip tekrar deneyiniz.';
+
+      if (e.response?.data is Map<String, dynamic>) {
+        final data = e.response!.data as Map<String, dynamic>;
+        if (data.containsKey('message') && data['message'] is String) {
+          serverErrorMessage = data['message'] as String;
+        } else if (data.containsKey('error') && data['error'] is String) {
+          serverErrorMessage = data['error'] as String;
+        }
+      }
+
       return VerifyOtpResponseModel(
-        status: 'Success',
-        message: 'Doğrulama başarılı (Test Modu)',
-        token: 'jwt_mock_token_renault_${DateTime.now().millisecondsSinceEpoch}',
+        status: 'Fail',
+        message: serverErrorMessage,
+      );
+    } catch (e) {
+      log('⚠️ [OTP SERVICE] Genel Sistem Hatası: $e');
+      return VerifyOtpResponseModel(
+        status: 'Fail',
+        message:
+            'Doğrulama sırasında bir hata oluştu. Lütfen tekrar deneyiniz.',
       );
     }
   }
@@ -57,9 +80,7 @@ class OtpService implements IOtpService {
     final fullPhone = '90$rawPhone';
     final endpoint = AppConstants.phoneVerificationEndpoint;
 
-    log('🔄 [OTP SERVICE] GET Kodu Tekrar Gönder');
-    // ignore: avoid_print
-    print('[OtpService] -> GET Tekrar Gönder: $fullPhone');
+    log('🔄 [OTP SERVICE] GET Kodu Tekrar Gönder: $fullPhone');
 
     try {
       await _dio.get(
@@ -68,8 +89,8 @@ class OtpService implements IOtpService {
       );
       return true;
     } catch (e) {
-      await Future.delayed(const Duration(milliseconds: 800));
-      return true;
+      log('⚠️ [OTP SERVICE] Kodu tekrar gönderme hatası: $e');
+      return false;
     }
   }
 }
