@@ -6,7 +6,7 @@ import '../model/verify_otp_request_model.dart';
 import '../model/verify_otp_response_model.dart';
 import 'i_otp_service.dart';
 
-/// Concrete OTP Service communicating via Dio (POST request matching exact manager specification)
+/// Concrete OTP Service communicating via Dio (POST & PUT fallback matching Azure API)
 class OtpService implements IOtpService {
   final Dio _dio;
 
@@ -16,7 +16,6 @@ class OtpService implements IOtpService {
   Future<VerifyOtpResponseModel> verifyOtp(VerifyOtpRequestModel request) async {
     final endpoint = AppConstants.phoneVerificationEndpoint;
 
-    // Strict 3-key payload specified by manager
     final finalRequest = VerifyOtpRequestModel(
       phoneVerificationId: request.phoneVerificationId,
       code: request.code,
@@ -49,23 +48,43 @@ class OtpService implements IOtpService {
       // ignore: avoid_print
       print('[OtpService] -> REAL SERVER RESPONSE BODY: ${response.data}');
 
-      // If HTTP 401 occurs, try sending phoneVerificationId as Bearer token in Authorization header
+      // If HTTP 401 occurs on POST, try PUT method on same endpoint
       if (response.statusCode == 401) {
         // ignore: avoid_print
-        print('[OtpService] 🔄 401 Detected! Retrying with Bearer phoneVerificationId header...');
-        response = await _dio.post(
-          endpoint,
-          data: finalRequest.toJson(),
-          options: Options(
-            headers: {
-              'Authorization': 'Bearer ${request.phoneVerificationId}',
-            },
-          ),
-        );
+        print('[OtpService] 🔄 401 Detected! Retrying with PUT method on $endpoint...');
+        try {
+          response = await _dio.put(
+            endpoint,
+            data: finalRequest.toJson(),
+          );
+          // ignore: avoid_print
+          print('[OtpService] -> PUT RETRY HTTP STATUS: ${response.statusCode}');
+          // ignore: avoid_print
+          print('[OtpService] -> PUT RETRY RESPONSE BODY: ${response.data}');
+        } catch (putError) {
+          // ignore: avoid_print
+          print('[OtpService] -> PUT RETRY ERROR: $putError');
+        }
+      }
+
+      // If still 401, try POST to /api/v1/customers/verifications/phone/verify
+      if (response.statusCode == 401) {
+        final verifySubEndpoint = '$endpoint/verify';
         // ignore: avoid_print
-        print('[OtpService] -> BEARER RETRY HTTP STATUS: ${response.statusCode}');
-        // ignore: avoid_print
-        print('[OtpService] -> BEARER RETRY RESPONSE BODY: ${response.data}');
+        print('[OtpService] 🔄 Retrying with POST on sub-endpoint: $verifySubEndpoint...');
+        try {
+          response = await _dio.post(
+            verifySubEndpoint,
+            data: finalRequest.toJson(),
+          );
+          // ignore: avoid_print
+          print('[OtpService] -> VERIFY SUB-ENDPOINT HTTP STATUS: ${response.statusCode}');
+          // ignore: avoid_print
+          print('[OtpService] -> VERIFY SUB-ENDPOINT RESPONSE BODY: ${response.data}');
+        } catch (subError) {
+          // ignore: avoid_print
+          print('[OtpService] -> VERIFY SUB-ENDPOINT ERROR: $subError');
+        }
       }
 
       if (response.data is Map<String, dynamic>) {
