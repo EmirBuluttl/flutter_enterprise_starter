@@ -6,7 +6,7 @@ import '../model/verify_otp_request_model.dart';
 import '../model/verify_otp_response_model.dart';
 import 'i_otp_service.dart';
 
-/// Concrete OTP Service communicating via Dio (POST request with rich diagnostic logging)
+/// Concrete OTP Service communicating via Dio (POST request with strict manager payload schema)
 class OtpService implements IOtpService {
   final Dio _dio;
 
@@ -14,9 +14,10 @@ class OtpService implements IOtpService {
 
   @override
   Future<VerifyOtpResponseModel> verifyOtp(VerifyOtpRequestModel request) async {
-    // Try both standard endpoint and trailing-slash endpoint if 301 redirect occurs
-    String endpoint = AppConstants.phoneVerificationEndpoint;
+    final endpoint = AppConstants.phoneVerificationEndpoint;
 
+    // Payload exactly matching manager specification:
+    // { "phoneVerificationId": "...", "code": "...", "notificationToken": "" }
     final finalRequest = VerifyOtpRequestModel(
       phoneVerificationId: request.phoneVerificationId,
       code: request.code,
@@ -24,7 +25,7 @@ class OtpService implements IOtpService {
     );
 
     log('===============================================================');
-    log('🚀 [OTP SERVICE] POST Kodu Doğrula');
+    log('🚀 [OTP SERVICE] POST Kodu Doğrula (HTTPS)');
     log('🔑 phoneVerificationId: ${finalRequest.phoneVerificationId}');
     log('🔢 Kod: ${finalRequest.code}');
     log('📡 İstek URL: ${_dio.options.baseUrl}$endpoint');
@@ -39,36 +40,15 @@ class OtpService implements IOtpService {
     print('Payload: ${finalRequest.toJson()}');
 
     try {
-      var response = await _dio.post(
+      final response = await _dio.post(
         endpoint,
         data: finalRequest.toJson(),
-        options: Options(
-          followRedirects: false, // Catch 301 to inspect Location header
-          validateStatus: (status) => status != null && status < 500,
-        ),
       );
 
       // ignore: avoid_print
-      print('[OtpService] -> RESPONSE HTTP STATUS: ${response.statusCode}');
-
-      // If server returned 301/302 Redirect, extract the Location header and retry POST directly on target URL!
-      if (response.statusCode == 301 || response.statusCode == 302 || response.statusCode == 307 || response.statusCode == 308) {
-        final redirectLocation = response.headers.value('location') ?? '';
-        // ignore: avoid_print
-        print('[OtpService] ⚠️ 301 REDIRECT DETECTED! Target Location: $redirectLocation');
-
-        if (redirectLocation.isNotEmpty) {
-          // Retry POST request directly on the target redirect location
-          response = await _dio.post(
-            redirectLocation,
-            data: finalRequest.toJson(),
-          );
-          // ignore: avoid_print
-          print('[OtpService] -> REDIRECT RETRY HTTP STATUS: ${response.statusCode}');
-          // ignore: avoid_print
-          print('[OtpService] -> REDIRECT RETRY RESPONSE BODY: ${response.data}');
-        }
-      }
+      print('[OtpService] -> REAL SERVER HTTP STATUS: ${response.statusCode}');
+      // ignore: avoid_print
+      print('[OtpService] -> REAL SERVER RESPONSE BODY: ${response.data}');
 
       if (response.data is Map<String, dynamic>) {
         final parsed = VerifyOtpResponseModel.fromJson(
@@ -98,8 +78,6 @@ class OtpService implements IOtpService {
       print('[OtpService] -> ERROR HTTP STATUS: ${e.response?.statusCode}');
       // ignore: avoid_print
       print('[OtpService] -> ERROR RESPONSE DATA: ${e.response?.data}');
-      // ignore: avoid_print
-      print('[OtpService] -> ERROR LOCATION HEADER: ${e.response?.headers.value('location')}');
 
       String serverErrorMessage =
           'Girdiğiniz doğrulama kodu hatalıdır. Lütfen tekrar deneyiniz.';
@@ -108,6 +86,11 @@ class OtpService implements IOtpService {
         final data = e.response!.data as Map<String, dynamic>;
         if (data.containsKey('message') && data['message'] is String) {
           serverErrorMessage = data['message'] as String;
+        } else if (data.containsKey('error') is Map<String, dynamic>) {
+          final errObj = data['error'] as Map<String, dynamic>;
+          if (errObj.containsKey('message') && errObj['message'] is String) {
+            serverErrorMessage = errObj['message'] as String;
+          }
         } else if (data.containsKey('error') && data['error'] is String) {
           serverErrorMessage = data['error'] as String;
         }

@@ -152,7 +152,7 @@ abstract class _OtpViewModelBase with Store implements BaseViewModel {
       final request = VerifyOtpRequestModel(
         phoneVerificationId: phoneVerificationId,
         code: otpCode,
-        notificationToken: 'test_fcm_token_renault_port_device_01',
+        notificationToken: '',
       );
 
       final response = await _otpService.verifyOtp(request);
