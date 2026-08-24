@@ -48,9 +48,12 @@ class AppStrings {
 class AppConstants {
   AppConstants._();
 
+  // ===========================================================================
+  // 🟢 GERÇEK AZURE STAGING HTTPS BASE URL
+  // ===========================================================================
+  static const String baseUrl = 'https://port-api-main-v2-staging.azurewebsites.net';
 
-  static const String baseUrl = 'http://port-api-main-v2-staging.azurewebsites.net';
-
+  // Endpoint
   static const String phoneVerificationEndpoint = '/api/v1/customers/verifications/phone';
 
   // Turkey Phone Mask & Formatter (+90 (5XX) XXX XX XX)
