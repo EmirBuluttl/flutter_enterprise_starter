@@ -14,7 +14,8 @@ class OtpService implements IOtpService {
 
   @override
   Future<VerifyOtpResponseModel> verifyOtp(VerifyOtpRequestModel request) async {
-    final endpoint = AppConstants.phoneVerificationEndpoint;
+    // Try both standard endpoint and trailing-slash endpoint if 301 redirect occurs
+    String endpoint = AppConstants.phoneVerificationEndpoint;
 
     final finalRequest = VerifyOtpRequestModel(
       phoneVerificationId: request.phoneVerificationId,
@@ -33,26 +34,46 @@ class OtpService implements IOtpService {
     // ignore: avoid_print
     print('---------------------------------------------------------------');
     // ignore: avoid_print
-    print('[OtpService] -> POST İstek Gönderiliyor:');
+    print('[OtpService] -> POST İstek Gönderiliyor: ${_dio.options.baseUrl}$endpoint');
     // ignore: avoid_print
     print('Payload: ${finalRequest.toJson()}');
 
     try {
-      final response = await _dio.post(
+      var response = await _dio.post(
         endpoint,
         data: finalRequest.toJson(),
+        options: Options(
+          followRedirects: false, // Catch 301 to inspect Location header
+          validateStatus: (status) => status != null && status < 500,
+        ),
       );
 
       // ignore: avoid_print
-      print('[OtpService] -> REAL SERVER HTTP STATUS: ${response.statusCode}');
-      // ignore: avoid_print
-      print('[OtpService] -> REAL SERVER RESPONSE BODY: ${response.data}');
+      print('[OtpService] -> RESPONSE HTTP STATUS: ${response.statusCode}');
+
+      // If server returned 301/302 Redirect, extract the Location header and retry POST directly on target URL!
+      if (response.statusCode == 301 || response.statusCode == 302 || response.statusCode == 307 || response.statusCode == 308) {
+        final redirectLocation = response.headers.value('location') ?? '';
+        // ignore: avoid_print
+        print('[OtpService] ⚠️ 301 REDIRECT DETECTED! Target Location: $redirectLocation');
+
+        if (redirectLocation.isNotEmpty) {
+          // Retry POST request directly on the target redirect location
+          response = await _dio.post(
+            redirectLocation,
+            data: finalRequest.toJson(),
+          );
+          // ignore: avoid_print
+          print('[OtpService] -> REDIRECT RETRY HTTP STATUS: ${response.statusCode}');
+          // ignore: avoid_print
+          print('[OtpService] -> REDIRECT RETRY RESPONSE BODY: ${response.data}');
+        }
+      }
 
       if (response.data is Map<String, dynamic>) {
         final parsed = VerifyOtpResponseModel.fromJson(
             response.data as Map<String, dynamic>);
 
-        // If HTTP status is 200/201 OK, treat as success even if status field is missing
         if ((response.statusCode == 200 || response.statusCode == 201) &&
             parsed.status.isEmpty) {
           return VerifyOtpResponseModel(
@@ -77,6 +98,8 @@ class OtpService implements IOtpService {
       print('[OtpService] -> ERROR HTTP STATUS: ${e.response?.statusCode}');
       // ignore: avoid_print
       print('[OtpService] -> ERROR RESPONSE DATA: ${e.response?.data}');
+      // ignore: avoid_print
+      print('[OtpService] -> ERROR LOCATION HEADER: ${e.response?.headers.value('location')}');
 
       String serverErrorMessage =
           'Girdiğiniz doğrulama kodu hatalıdır. Lütfen tekrar deneyiniz.';
