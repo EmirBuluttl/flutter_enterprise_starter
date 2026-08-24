@@ -6,7 +6,7 @@ import '../model/verify_otp_request_model.dart';
 import '../model/verify_otp_response_model.dart';
 import 'i_otp_service.dart';
 
-/// Concrete OTP Service communicating via Dio (POST & PUT fallback matching Azure API)
+/// Concrete OTP Service communicating via Dio (with trailing slash 301 redirect prevention)
 class OtpService implements IOtpService {
   final Dio _dio;
 
@@ -14,7 +14,9 @@ class OtpService implements IOtpService {
 
   @override
   Future<VerifyOtpResponseModel> verifyOtp(VerifyOtpRequestModel request) async {
-    final endpoint = AppConstants.phoneVerificationEndpoint;
+    // Test both standard endpoint and trailing-slash endpoint
+    final baseEndpoint = AppConstants.phoneVerificationEndpoint;
+    final trailingSlashEndpoint = '$baseEndpoint/';
 
     final finalRequest = VerifyOtpRequestModel(
       phoneVerificationId: request.phoneVerificationId,
@@ -26,20 +28,21 @@ class OtpService implements IOtpService {
     log('🚀 [OTP SERVICE] POST Kodu Doğrula');
     log('🔑 phoneVerificationId: ${finalRequest.phoneVerificationId}');
     log('🔢 Kod: ${finalRequest.code}');
-    log('📡 İstek URL: ${_dio.options.baseUrl}$endpoint');
+    log('📡 İstek URL: ${_dio.options.baseUrl}$baseEndpoint');
     log('📦 Payload: ${finalRequest.toJson()}');
     log('===============================================================');
 
     // ignore: avoid_print
     print('---------------------------------------------------------------');
     // ignore: avoid_print
-    print('[OtpService] -> POST İstek Gönderiliyor: ${_dio.options.baseUrl}$endpoint');
+    print('[OtpService] -> POST İstek Gönderiliyor: ${_dio.options.baseUrl}$baseEndpoint');
     // ignore: avoid_print
     print('Payload: ${finalRequest.toJson()}');
 
     try {
+      // 1. Try direct POST to base endpoint
       var response = await _dio.post(
-        endpoint,
+        baseEndpoint,
         data: finalRequest.toJson(),
       );
 
@@ -48,42 +51,22 @@ class OtpService implements IOtpService {
       // ignore: avoid_print
       print('[OtpService] -> REAL SERVER RESPONSE BODY: ${response.data}');
 
-      // If HTTP 401 occurs on POST, try PUT method on same endpoint
+      // If HTTP 401 occurs, try with trailing slash '/' to prevent Azure 301 method drop
       if (response.statusCode == 401) {
         // ignore: avoid_print
-        print('[OtpService] 🔄 401 Detected! Retrying with PUT method on $endpoint...');
-        try {
-          response = await _dio.put(
-            endpoint,
-            data: finalRequest.toJson(),
-          );
-          // ignore: avoid_print
-          print('[OtpService] -> PUT RETRY HTTP STATUS: ${response.statusCode}');
-          // ignore: avoid_print
-          print('[OtpService] -> PUT RETRY RESPONSE BODY: ${response.data}');
-        } catch (putError) {
-          // ignore: avoid_print
-          print('[OtpService] -> PUT RETRY ERROR: $putError');
-        }
-      }
-
-      // If still 401, try POST to /api/v1/customers/verifications/phone/verify
-      if (response.statusCode == 401) {
-        final verifySubEndpoint = '$endpoint/verify';
-        // ignore: avoid_print
-        print('[OtpService] 🔄 Retrying with POST on sub-endpoint: $verifySubEndpoint...');
+        print('[OtpService] 🔄 401 Detected! Retrying with trailing slash: ${_dio.options.baseUrl}$trailingSlashEndpoint');
         try {
           response = await _dio.post(
-            verifySubEndpoint,
+            trailingSlashEndpoint,
             data: finalRequest.toJson(),
           );
           // ignore: avoid_print
-          print('[OtpService] -> VERIFY SUB-ENDPOINT HTTP STATUS: ${response.statusCode}');
+          print('[OtpService] -> TRAILING SLASH HTTP STATUS: ${response.statusCode}');
           // ignore: avoid_print
-          print('[OtpService] -> VERIFY SUB-ENDPOINT RESPONSE BODY: ${response.data}');
-        } catch (subError) {
+          print('[OtpService] -> TRAILING SLASH RESPONSE BODY: ${response.data}');
+        } catch (slashErr) {
           // ignore: avoid_print
-          print('[OtpService] -> VERIFY SUB-ENDPOINT ERROR: $subError');
+          print('[OtpService] -> TRAILING SLASH ERROR: $slashErr');
         }
       }
 
