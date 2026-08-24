@@ -153,6 +153,7 @@ abstract class _OtpViewModelBase with Store implements BaseViewModel {
         phoneVerificationId: phoneVerificationId,
         code: otpCode,
         notificationToken: '',
+        phone: phoneNumber,
       );
 
       final response = await _otpService.verifyOtp(request);
