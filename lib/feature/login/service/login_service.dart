@@ -5,7 +5,7 @@ import '../../../core/init/network/network_manager.dart';
 import '../model/phone_verification_response_model.dart';
 import 'i_login_service.dart';
 
-/// Concrete Login Service communicating via Dio (GET request)
+/// Concrete Login Service communicating via Dio (GET request with rich diagnostic logging)
 class LoginService implements ILoginService {
   final Dio _dio;
 
@@ -24,13 +24,22 @@ class LoginService implements ILoginService {
     log('===============================================================');
 
     // ignore: avoid_print
-    print('[LoginService] -> GET İstek gönderiliyor: $fullPhone');
+    print('---------------------------------------------------------------');
+    // ignore: avoid_print
+    print('[LoginService] -> GET İstek Gönderiliyor: ${_dio.options.baseUrl}$endpoint?phone=$fullPhone');
 
     try {
       final response = await _dio.get(
         endpoint,
         queryParameters: {'phone': fullPhone},
       );
+
+      // ignore: avoid_print
+      print('[LoginService] -> GET RESPONSE HTTP STATUS: ${response.statusCode}');
+      // ignore: avoid_print
+      print('[LoginService] -> GET RESPONSE HEADERS: ${response.headers}');
+      // ignore: avoid_print
+      print('[LoginService] -> GET RESPONSE DATA: ${response.data}');
 
       if (response.data is Map<String, dynamic>) {
         return PhoneVerificationResponseModel.fromJson(
@@ -41,7 +50,9 @@ class LoginService implements ILoginService {
     } catch (e) {
       log('⚠️ [LOGIN SERVICE] Gerçek API bağlantısı sırasında hata: $e');
 
-      // Eğer henüz gerçek sunucu URL'i girilmediyse (veya test ortamıysa) simüle edilmiş yanıt dön
+      // ignore: avoid_print
+      print('[LoginService] -> GET ERROR: $e');
+
       await Future.delayed(const Duration(milliseconds: 1000));
       return PhoneVerificationResponseModel(
         status: 'Success',
