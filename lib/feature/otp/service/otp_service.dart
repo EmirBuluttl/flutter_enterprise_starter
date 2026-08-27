@@ -1,12 +1,19 @@
 import 'dart:developer';
 import 'package:dio/dio.dart';
 import '../../../core/constants/app_constants.dart';
+import '../../../core/init/cache/locale_storage_service.dart';
 import '../../../core/init/network/network_manager.dart';
 import '../model/verify_otp_request_model.dart';
 import '../model/verify_otp_response_model.dart';
 import 'i_otp_service.dart';
 
-/// Concrete OTP Service communicating via Dio (Strict Backend Verification with full Header & Body Logging)
+/// Concrete OTP Service — Strict Backend Verification + Token Storage
+///
+/// ## Token Akışı:
+/// 1. POST /verifications/phone → Sunucu 200 döner
+/// 2. Response Header'ından `Authorization: Bearer eyJ...` alınır
+/// 3. [LocaleStorageService] üzerinden locale'e kaydedilir
+/// 4. Bir sonraki açılışta [main.dart] token'ı okuyarak direkt yönlendirir
 class OtpService implements IOtpService {
   final Dio _dio;
 
@@ -20,6 +27,7 @@ class OtpService implements IOtpService {
       phoneVerificationId: request.phoneVerificationId,
       code: request.code,
       notificationToken: request.notificationToken,
+      phone: request.phone,
     );
 
     log('===============================================================');
@@ -52,17 +60,42 @@ class OtpService implements IOtpService {
       // ignore: avoid_print
       print('[OtpService] -> REAL SERVER RESPONSE BODY: ${response.data}');
 
-      // Only treat 200 and 201 as valid success HTTP status
+      // Sadece 200 ve 201 başarılı kabul edilir
       if (response.statusCode == 200 || response.statusCode == 201) {
         if (response.data is Map<String, dynamic>) {
           final parsed = VerifyOtpResponseModel.fromJson(
-              response.data as Map<String, dynamic>);
-          
+            response.data as Map<String, dynamic>,
+          );
+
+          // -------------------------------------------------------------------
+          // BEARER TOKEN — Header'dan al ve locale'e kaydet
+          // -------------------------------------------------------------------
+          // Sunucu, Authorization header'ında "Bearer eyJhbGci..." formatında
+          // token gönderir. Biz sadece "eyJhbGci..." kısmını kaydediyoruz.
+          final authHeader = response.headers.value('authorization') ??
+              response.headers.value('Authorization');
+
+          if (authHeader != null && authHeader.isNotEmpty) {
+            // "Bearer " önekini kaldırarak sadece token değerini al
+            final rawToken = authHeader.startsWith('Bearer ')
+                ? authHeader.substring(7)
+                : authHeader;
+
+            await LocaleStorageService.instance.saveToken(rawToken);
+
+            log('✅ [OTP SERVICE] Bearer Token locale\'e kaydedildi.');
+            // ignore: avoid_print
+            print('[OtpService] -> ✅ TOKEN KAYDEDILDI: ${rawToken.substring(0, rawToken.length.clamp(0, 20))}...');
+          } else {
+            log('⚠️ [OTP SERVICE] Authorization header bulunamadı, token kaydedilmedi.');
+            // ignore: avoid_print
+            print('[OtpService] -> ⚠️ AUTHORIZATION HEADER YOK');
+          }
+
           if (parsed.status.isEmpty) {
             return VerifyOtpResponseModel(
               status: 'Success',
-              data: parsed.data,
-              token: parsed.token,
+              otpData: parsed.otpData,
             );
           }
           return parsed;
@@ -70,21 +103,20 @@ class OtpService implements IOtpService {
         return VerifyOtpResponseModel(status: 'Success');
       }
 
-      // Any HTTP status other than 200/201 is a failure
-      String serverError = 'Girdiğiniz doğrulama kodu hatalıdır. Lütfen tekrar deneyiniz.';
+      // 200/201 dışındaki her durum başarısızlıktır
+      String serverError =
+          'Girdiğiniz doğrulama kodu hatalıdır. Lütfen tekrar deneyiniz.';
       if (response.data is Map<String, dynamic>) {
         final map = response.data as Map<String, dynamic>;
-        if (map['error'] is Map<String, dynamic> && map['error']['message'] != null) {
+        if (map['error'] is Map<String, dynamic> &&
+            map['error']['message'] != null) {
           serverError = map['error']['message'] as String;
         } else if (map['message'] is String) {
           serverError = map['message'] as String;
         }
       }
 
-      return VerifyOtpResponseModel(
-        status: 'Fail',
-        message: serverError,
-      );
+      return VerifyOtpResponseModel(status: 'Fail', message: serverError);
     } on DioException catch (e) {
       log('❌ [OTP SERVICE] Backend Hata Yanıtı (HTTP ${e.response?.statusCode}): ${e.response?.data}');
 
@@ -112,16 +144,12 @@ class OtpService implements IOtpService {
         }
       }
 
-      return VerifyOtpResponseModel(
-        status: 'Fail',
-        message: serverErrorMessage,
-      );
+      return VerifyOtpResponseModel(status: 'Fail', message: serverErrorMessage);
     } catch (e) {
       log('⚠️ [OTP SERVICE] Genel Sistem Hatası: $e');
       return VerifyOtpResponseModel(
         status: 'Fail',
-        message:
-            'Doğrulama sırasında bir hata oluştu. Lütfen tekrar deneyiniz.',
+        message: 'Doğrulama sırasında bir hata oluştu. Lütfen tekrar deneyiniz.',
       );
     }
   }

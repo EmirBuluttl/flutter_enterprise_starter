@@ -4,7 +4,7 @@ import 'package:flutter_enterprise_starter/main.dart';
 
 void main() {
   testWidgets('EnterpriseApp renders Renault Port login screen bound to AppTheme', (WidgetTester tester) async {
-    await tester.pumpWidget(const EnterpriseApp());
+    await tester.pumpWidget(const EnterpriseApp(startWithHome: false));
 
     // Verify label and buttons
     expect(find.text('Your phone number'), findsOneWidget);

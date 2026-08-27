@@ -1,23 +1,40 @@
-/// Response model for POST OTP verification
+import 'otp_verification_data.dart';
+
+/// POST OTP doğrulaması yanıt modeli.
+///
+/// Sunucudan gelen JSON:
+/// ```json
+/// {
+///   "status": "Success",
+///   "data": {
+///     "isAlreadyUser": false,
+///     "phoneVerification": { "id": "...", "phone": "...", "verifiedAt": "..." }
+///   }
+/// }
+/// ```
+/// Bearer Token ise Response Header'ından alınır:
+/// `Authorization: Bearer eyJhbGci...`
 class VerifyOtpResponseModel {
   final String status;
   final String? message;
+
+  /// Header'dan alınan Bearer Token (OtpService tarafından doldurulur)
   final String? token;
-  final Map<String, dynamic>? data;
+
+  /// Tip-güvenli parse edilmiş `data` alanı
+  final OtpVerificationData? otpData;
 
   VerifyOtpResponseModel({
     required this.status,
     this.message,
     this.token,
-    this.data,
+    this.otpData,
   });
 
+  /// HTTP 200/201 ve status == 'Success' ise true
   bool get isSuccess {
     final lower = status.toLowerCase();
-    return lower == 'success' ||
-        lower == 'ok' ||
-        lower == 'true' ||
-        (status.isEmpty && data != null);
+    return lower == 'success' || lower == 'ok';
   }
 
   factory VerifyOtpResponseModel.fromJson(Map<String, dynamic> json) {
@@ -26,25 +43,22 @@ class VerifyOtpResponseModel {
       parsedStatus = 'Success';
     }
 
+    // `data` alanı varsa OtpVerificationData olarak parse et
+    OtpVerificationData? parsedData;
+    if (json['data'] is Map<String, dynamic>) {
+      parsedData = OtpVerificationData.fromJson(
+        json['data'] as Map<String, dynamic>,
+      );
+    }
+
     return VerifyOtpResponseModel(
       status: parsedStatus,
       message: json['message'] as String? ?? json['error'] as String?,
-      token: json['token'] as String? ?? json['accessToken'] as String?,
-      data: json['data'] is Map<String, dynamic>
-          ? json['data'] as Map<String, dynamic>
-          : null,
+      otpData: parsedData,
     );
   }
 
-  Map<String, dynamic> toJson() {
-    return {
-      'status': status,
-      if (message != null) 'message': message,
-      if (token != null) 'token': token,
-      if (data != null) 'data': data,
-    };
-  }
-
   @override
-  String toString() => 'VerifyOtpResponseModel(status: $status, message: $message)';
+  String toString() =>
+      'VerifyOtpResponseModel(status: $status, isAlreadyUser: ${otpData?.isAlreadyUser})';
 }

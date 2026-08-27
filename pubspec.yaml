@@ -41,6 +41,9 @@ dependencies:
   # Networking
   dio: ^5.7.0
 
+  # Local Storage (Token & User State)
+  shared_preferences: ^2.3.3
+
   # Masking & Form Input
   mask_text_input_formatter: ^2.9.0
 

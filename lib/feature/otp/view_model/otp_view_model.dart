@@ -4,6 +4,7 @@ import 'package:mobx/mobx.dart';
 import '../../../core/base/view_model/base_view_model.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../home/view/home_view.dart';
+import '../../profile/view/profile_view.dart';
 import '../model/verify_otp_request_model.dart';
 import '../model/verify_otp_response_model.dart';
 import '../service/i_otp_service.dart';
@@ -162,14 +163,34 @@ abstract class _OtpViewModelBase with Store implements BaseViewModel {
       if (response.isSuccess && buildContext != null && buildContext!.mounted) {
         _timer?.cancel();
 
-        // Verification successful -> Navigate to Renault Port Home Page
-        Navigator.pushAndRemoveUntil(
-          buildContext!,
-          MaterialPageRoute(builder: (context) => const HomeView()),
-          (route) => false,
-        );
+        // ------------------------------------------------------------------
+        // YÖNLENDIRME — isAlreadyUser kontrolü
+        // ------------------------------------------------------------------
+        // isAlreadyUser == true  → Kullanıcı sistemde kayıtlı → HomeView
+        // isAlreadyUser == false → Yeni kullanıcı → ProfileView (kayıt ekranı)
+        //
+        // Neden OtpViewModel'da yapıyoruz?
+        // ViewModel, iş mantığını (business logic) yönetir. Hangi sayfaya
+        // gidileceği bir iş kararıdır, View'ın değil ViewModel'ın sorumluluğudur.
+        final isAlreadyUser = response.otpData?.isAlreadyUser ?? false;
+
+        if (isAlreadyUser) {
+          // Kayıtlı kullanıcı → Doğrudan Ana Sayfa
+          Navigator.pushAndRemoveUntil(
+            buildContext!,
+            MaterialPageRoute(builder: (context) => const HomeView()),
+            (route) => false,
+          );
+        } else {
+          // Yeni kullanıcı → Profil Kayıt Sayfası
+          Navigator.pushAndRemoveUntil(
+            buildContext!,
+            MaterialPageRoute(builder: (context) => const ProfileView()),
+            (route) => false,
+          );
+        }
       } else {
-        // Verification failed -> Display backend error message and DO NOT navigate
+        // Doğrulama başarısız → Hata mesajı göster, sayfada kal
         errorMessage = response.message ??
             'Girdiğiniz doğrulama kodu hatalıdır. Lütfen tekrar deneyiniz.';
       }
