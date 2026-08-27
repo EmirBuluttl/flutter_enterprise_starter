@@ -1,7 +1,10 @@
+import 'dart:developer';
 import 'package:flutter/material.dart';
 import 'package:mobx/mobx.dart';
 import '../../../core/base/view_model/base_view_model.dart';
 import '../../../core/constants/app_constants.dart';
+import '../../../core/init/cache/locale_storage_service.dart';
+import '../../home/view/home_view.dart';
 import '../../otp/view/otp_view.dart';
 import '../model/phone_verification_response_model.dart';
 import '../service/i_login_service.dart';
@@ -77,7 +80,44 @@ abstract class _LoginViewModelBase with Store implements BaseViewModel {
     isLoading = true;
     errorMessage = null;
 
+    final phone = rawPhoneNumber.trim();
+
     try {
+      // -----------------------------------------------------------------------
+      // 5. GİRİŞ & TOKEN KONTROLÜ (Step-up Auth)
+      // -----------------------------------------------------------------------
+      final isRegistered = LocaleStorageService.instance.isUserRegistered(phone);
+      final existingToken = LocaleStorageService.instance.getTokenForPhone(phone);
+      final currentLoginCount = LocaleStorageService.instance.getLoginCount(phone);
+
+      log('🔍 [LOGIN VM] Numara: $phone, Kayıtlı mı: $isRegistered, Sayaç: $currentLoginCount');
+
+      // Eğer kullanıcı daha önce kayıt olduysa ve geçerli token'ı varsa:
+      if (isRegistered && existingToken != null && existingToken.isNotEmpty) {
+        if (currentLoginCount < 4) {
+          // 1., 2., 3., 4. Girişler: SMS sormadan doğrudan HomeView'a al
+          final newCount = await LocaleStorageService.instance.incrementLoginCount(phone);
+          await LocaleStorageService.instance.saveToken(existingToken);
+          await LocaleStorageService.instance.setLastPhoneNumber(phone);
+
+          log('⚡ [LOGIN VM] Hızlı Giriş Yapıldı! (Sayaç: $newCount/5)');
+
+          if (buildContext != null && buildContext!.mounted) {
+            Navigator.pushAndRemoveUntil(
+              buildContext!,
+              MaterialPageRoute(builder: (context) => const HomeView()),
+              (route) => false,
+            );
+          }
+          return;
+        } else {
+          // 5. Giriş: Güvenlik amaçlı SMS doğrulaması zorunlu! Sayacı sıfırla.
+          log('🛡️ [LOGIN VM] 5. Giriş Tespit Edildi! Güvenlik için SMS kodu isteniyor.');
+          await LocaleStorageService.instance.resetLoginCount(phone);
+        }
+      }
+
+      // Kayıtsız kullanıcı veya 5. giriş: Normal SMS Doğrulama Akışı
       final response =
           await _loginService.requestPhoneVerification(rawPhoneNumber);
       verificationResult = response;

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../core/constants/app_constants.dart';
+import '../../../core/init/cache/locale_storage_service.dart';
 import '../../home/view/home_view.dart';
 
 /// Profil Kayıt Ekranı
@@ -10,9 +11,12 @@ import '../../home/view/home_view.dart';
 ///
 /// ## Ne Yapar?
 /// Kullanıcıdan temel profil bilgilerini alır (Ad, Soyad).
-/// Kaydedildikten sonra [HomeView]'a geçiş yapılır.
+/// Bilgiler kaydedildikten sonra telefon numarası için `isUserRegistered = true`
+/// işaretlenir ve [HomeView]'a geçiş yapılır.
 class ProfileView extends StatefulWidget {
-  const ProfileView({super.key});
+  final String? phoneNumber;
+
+  const ProfileView({super.key, this.phoneNumber});
 
   @override
   State<ProfileView> createState() => _ProfileViewState();
@@ -37,8 +41,18 @@ class _ProfileViewState extends State<ProfileView> {
     setState(() => _isLoading = true);
 
     // TODO: Profil kayıt API'si geldiğinde buraya eklenecek
-    // Şimdilik 1 saniye simüle edip HomeView'a yönlendiriyoruz
-    await Future.delayed(const Duration(seconds: 1));
+    // Simülasyon gecikmesi
+    await Future.delayed(const Duration(milliseconds: 600));
+
+    // Telefon numarasını kayıtlı olarak işaretle ve sayacı 1 yap
+    final phone = widget.phoneNumber ??
+        LocaleStorageService.instance.lastPhoneNumber ??
+        '';
+
+    if (phone.isNotEmpty) {
+      await LocaleStorageService.instance.setUserRegistered(phone, true);
+      await LocaleStorageService.instance.incrementLoginCount(phone);
+    }
 
     if (!mounted) return;
     setState(() => _isLoading = false);
@@ -147,7 +161,8 @@ class _ProfileViewState extends State<ProfileView> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF0099E6),
                       foregroundColor: Colors.white,
-                      disabledBackgroundColor: const Color(0xFF0099E6).withValues(alpha: 0.5),
+                      disabledBackgroundColor:
+                          const Color(0xFF0099E6).withValues(alpha: 0.5),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
@@ -241,7 +256,8 @@ class _ProfileTextField extends StatelessWidget {
               borderRadius: BorderRadius.circular(12),
               borderSide: const BorderSide(color: Color(0xFFEF4444), width: 2),
             ),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           ),
         ),
       ],

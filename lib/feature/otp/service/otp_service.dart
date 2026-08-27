@@ -81,7 +81,12 @@ class OtpService implements IOtpService {
                 ? authHeader.substring(7)
                 : authHeader;
 
-            await LocaleStorageService.instance.saveToken(rawToken);
+            final phone = finalRequest.phone;
+            if (phone != null && phone.isNotEmpty) {
+              await LocaleStorageService.instance.saveTokenForPhone(phone, rawToken);
+            } else {
+              await LocaleStorageService.instance.saveToken(rawToken);
+            }
 
             log('✅ [OTP SERVICE] Bearer Token locale\'e kaydedildi.');
             // ignore: avoid_print

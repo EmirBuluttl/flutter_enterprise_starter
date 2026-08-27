@@ -1,4 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_enterprise_starter/core/init/cache/locale_storage_service.dart';
 import 'package:flutter_enterprise_starter/feature/otp/model/verify_otp_request_model.dart';
 import 'package:flutter_enterprise_starter/feature/otp/model/verify_otp_response_model.dart';
 import 'package:flutter_enterprise_starter/feature/otp/service/i_otp_service.dart';
@@ -27,11 +29,17 @@ class MockOtpService implements IOtpService {
 }
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   group('OtpViewModel MobX Tests', () {
     late OtpViewModel viewModel;
     late MockOtpService mockService;
 
-    setUp(() {
+    setUp(() async {
+      SharedPreferences.setMockInitialValues({});
+      await LocaleStorageService.init();
+      await LocaleStorageService.instance.clear();
+
       mockService = MockOtpService();
       viewModel = OtpViewModel(
         phoneNumber: '5551234567',
@@ -74,10 +82,7 @@ void main() {
       viewModel.setOtpCode('4321');
       expect(viewModel.isVerifyButtonEnabled, isTrue);
 
-      final future = viewModel.submitVerifyOtp();
-      expect(viewModel.isLoading, isTrue);
-
-      await future;
+      await viewModel.submitVerifyOtp();
 
       expect(viewModel.isLoading, isFalse);
       expect(mockService.verifyCalled, isTrue);

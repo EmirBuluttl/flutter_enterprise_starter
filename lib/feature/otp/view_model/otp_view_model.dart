@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:mobx/mobx.dart';
 import '../../../core/base/view_model/base_view_model.dart';
 import '../../../core/constants/app_constants.dart';
+import '../../../core/init/cache/locale_storage_service.dart';
 import '../../home/view/home_view.dart';
 import '../../profile/view/profile_view.dart';
 import '../model/verify_otp_request_model.dart';
@@ -164,33 +165,36 @@ abstract class _OtpViewModelBase with Store implements BaseViewModel {
         _timer?.cancel();
 
         // ------------------------------------------------------------------
-        // YÖNLENDIRME — isAlreadyUser kontrolü
+        // YÖNLENDIRME & KAYIT KONTROLÜ (Hibrit: Sunucu + Local Cache)
         // ------------------------------------------------------------------
-        // isAlreadyUser == true  → Kullanıcı sistemde kayıtlı → HomeView
-        // isAlreadyUser == false → Yeni kullanıcı → ProfileView (kayıt ekranı)
-        //
-        // Neden OtpViewModel'da yapıyoruz?
-        // ViewModel, iş mantığını (business logic) yönetir. Hangi sayfaya
-        // gidileceği bir iş kararıdır, View'ın değil ViewModel'ın sorumluluğudur.
-        final isAlreadyUser = response.otpData?.isAlreadyUser ?? false;
+        final cleanPhone = phoneNumber.trim();
+
+        // Sunucudan gelen isAlreadyUser true ise VEYA kullanıcı localde daha önce kayıt olmuşsa
+        final isAlreadyUser = (response.otpData?.isAlreadyUser ?? false) ||
+            LocaleStorageService.instance.isUserRegistered(cleanPhone);
 
         if (isAlreadyUser) {
-          // Kayıtlı kullanıcı → Doğrudan Ana Sayfa
+          // Kayıtlı kullanıcı -> Sayacı 1 yap, HomeView'a yönlendir
+          await LocaleStorageService.instance.setUserRegistered(cleanPhone, true);
+          await LocaleStorageService.instance.incrementLoginCount(cleanPhone);
+
           Navigator.pushAndRemoveUntil(
             buildContext!,
             MaterialPageRoute(builder: (context) => const HomeView()),
             (route) => false,
           );
         } else {
-          // Yeni kullanıcı → Profil Kayıt Sayfası
+          // İlk kez gelen yeni kullanıcı -> Profil Kayıt Sayfası
           Navigator.pushAndRemoveUntil(
             buildContext!,
-            MaterialPageRoute(builder: (context) => const ProfileView()),
+            MaterialPageRoute(
+              builder: (context) => ProfileView(phoneNumber: cleanPhone),
+            ),
             (route) => false,
           );
         }
       } else {
-        // Doğrulama başarısız → Hata mesajı göster, sayfada kal
+        // Doğrulama başarısız
         errorMessage = response.message ??
             'Girdiğiniz doğrulama kodu hatalıdır. Lütfen tekrar deneyiniz.';
       }

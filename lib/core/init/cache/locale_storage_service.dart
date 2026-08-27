@@ -5,31 +5,6 @@ import 'locale_keys.dart';
 ///
 /// Singleton olarak çalışır. Uygulama başlangıcında [init()] çağrılarak
 /// hazır hale getirilmelidir (main.dart içinde).
-///
-/// ## Neden Böyle Yapıyoruz?
-/// SharedPreferences'ın getInt(), getBool(), setString() gibi onlarca
-/// metodunu her yerde ayrı ayrı çağırmak yerine tek bir [save] ve [read]
-/// metodu ile generic yapıda tüm tipleri yönetiyoruz.
-///
-/// ## Kullanım Örnekleri:
-/// ```dart
-/// // Kaydet
-/// await LocaleStorageService.instance.save<String>(
-///   key: LocaleKeys.bearerToken,
-///   value: 'eyJhbGci...',
-/// );
-///
-/// // Oku
-/// final token = LocaleStorageService.instance.read<String>(
-///   key: LocaleKeys.bearerToken,
-/// );
-///
-/// // Sil
-/// await LocaleStorageService.instance.remove(key: LocaleKeys.bearerToken);
-///
-/// // Tümünü temizle (çıkış yapınca)
-/// await LocaleStorageService.instance.clear();
-/// ```
 class LocaleStorageService {
   LocaleStorageService._();
 
@@ -47,7 +22,6 @@ class LocaleStorageService {
   late final SharedPreferences _prefs;
 
   /// Uygulamanın başında bir kez çağrılır (main.dart).
-  /// SharedPreferences instance'ını hazırlar.
   static Future<void> init() async {
     if (_instance != null) return;
     _instance = LocaleStorageService._();
@@ -55,11 +29,10 @@ class LocaleStorageService {
   }
 
   // ---------------------------------------------------------------------------
-  // WRITE — Kaydet
+  // GENERIC CRUD (Temel İşlemler)
   // ---------------------------------------------------------------------------
 
   /// Verilen [key] ile [value]'yu locale'e kaydeder.
-  /// Desteklenen tipler: [String], [bool], [int], [double]
   Future<void> save<T>({required String key, required T value}) async {
     if (value is String) {
       await _prefs.setString(key, value);
@@ -77,13 +50,7 @@ class LocaleStorageService {
     }
   }
 
-  // ---------------------------------------------------------------------------
-  // READ — Oku
-  // ---------------------------------------------------------------------------
-
-  /// Verilen [key] için kaydedilmiş değeri döndürür.
-  /// Değer yoksa [null] döner.
-  /// Desteklenen tipler: [String], [bool], [int], [double]
+  /// Verilen [key] için kaydedilmiş değeri döndürür. Yoksa [null].
   T? read<T>({required String key}) {
     if (T == String) return _prefs.getString(key) as T?;
     if (T == bool) return _prefs.getBool(key) as T?;
@@ -95,37 +62,81 @@ class LocaleStorageService {
     );
   }
 
-  // ---------------------------------------------------------------------------
-  // DELETE — Sil
-  // ---------------------------------------------------------------------------
-
   /// Belirtilen [key]'e ait değeri siler.
   Future<void> remove({required String key}) async {
     await _prefs.remove(key);
   }
 
-  /// Tüm kayıtlı değerleri siler. Çıkış yapıldığında kullanılır.
+  /// Tüm kayıtlı değerleri siler.
   Future<void> clear() async {
     await _prefs.clear();
   }
 
   // ---------------------------------------------------------------------------
-  // HELPERS — Kısayollar
+  // GLOBAL TOKEN & SON NUMARA YÖNETİMİ
   // ---------------------------------------------------------------------------
 
-  /// Kayıtlı Bearer Token'ı döndürür. Yoksa [null].
+  /// Aktif Bearer Token
   String? get bearerToken => read<String>(key: LocaleKeys.bearerToken);
 
-  /// Token'ın var olup olmadığını kontrol eder.
-  bool get hasToken {
-    final token = bearerToken;
-    return token != null && token.isNotEmpty;
-  }
+  bool get hasToken => bearerToken != null && bearerToken!.isNotEmpty;
 
-  /// Token'ı kaydeder.
   Future<void> saveToken(String token) =>
       save<String>(key: LocaleKeys.bearerToken, value: token);
 
-  /// Token'ı siler (çıkış yapılınca).
   Future<void> removeToken() => remove(key: LocaleKeys.bearerToken);
+
+  /// Son kullanılan telefon numarasını kaydeder / getirir
+  String? get lastPhoneNumber => read<String>(key: LocaleKeys.lastPhoneNumber);
+
+  Future<void> setLastPhoneNumber(String phone) =>
+      save<String>(key: LocaleKeys.lastPhoneNumber, value: phone);
+
+  // ---------------------------------------------------------------------------
+  // TELEFON BAZLI KAYIT & 5. GİRİŞ GÜVENLİK SAYACI
+  // ---------------------------------------------------------------------------
+
+  /// Kullanıcı bu telefon numarasıyla daha önce profil kaydını tamamladı mı?
+  bool isUserRegistered(String phone) {
+    return read<bool>(key: LocaleKeys.isRegisteredKey(phone)) ?? false;
+  }
+
+  /// Kullanıcının kayıt durumunu günceller
+  Future<void> setUserRegistered(String phone, bool isRegistered) async {
+    await save<bool>(
+      key: LocaleKeys.isRegisteredKey(phone),
+      value: isRegistered,
+    );
+  }
+
+  /// Telefon numarasına ait saklanan token'ı döndürür
+  String? getTokenForPhone(String phone) {
+    return read<String>(key: LocaleKeys.tokenKey(phone));
+  }
+
+  /// Telefon numarasıyla ilişkili token'ı kaydeder
+  Future<void> saveTokenForPhone(String phone, String token) async {
+    await save<String>(key: LocaleKeys.tokenKey(phone), value: token);
+    // Global token'ı da güncelle
+    await saveToken(token);
+    await setLastPhoneNumber(phone);
+  }
+
+  /// Bu telefonla kaç kez hızlı giriş yapıldığını döndürür (varsayılan: 0)
+  int getLoginCount(String phone) {
+    return read<int>(key: LocaleKeys.loginCountKey(phone)) ?? 0;
+  }
+
+  /// Giriş sayacını 1 artırır
+  Future<int> incrementLoginCount(String phone) async {
+    final current = getLoginCount(phone);
+    final next = current + 1;
+    await save<int>(key: LocaleKeys.loginCountKey(phone), value: next);
+    return next;
+  }
+
+  /// 5. giriş sonrası veya yeni SMS sonrası sayacı sıfırlar
+  Future<void> resetLoginCount(String phone) async {
+    await save<int>(key: LocaleKeys.loginCountKey(phone), value: 0);
+  }
 }
