@@ -165,38 +165,50 @@ abstract class _OtpViewModelBase with Store implements BaseViewModel {
         _timer?.cancel();
 
         // ------------------------------------------------------------------
-        // YÖNLENDIRME & KAYIT KONTROLÜ (Hibrit: Sunucu + Local Cache)
+        // YÖNLENDIRME & KAYIT KONTROLÜ
         // ------------------------------------------------------------------
         final cleanPhone = phoneNumber.trim();
 
-        // Cihazda kayıtlı profil bilgisi (İsim/Soyisim) var mı?
-        final hasSavedProfile = LocaleStorageService.instance.userName != null &&
-            LocaleStorageService.instance.userName!.isNotEmpty;
+        // Sunucudan gelen isAlreadyUser true ise VEYA kullanıcı daha önce kayıt olmuşsa
+        final isAlreadyUser = (response.otpData?.isAlreadyUser ?? false) ||
+            LocaleStorageService.instance.isUserRegistered(cleanPhone);
 
-        final isAlreadyUser = (response.otpData?.isAlreadyUser ?? false);
-
-        if (isAlreadyUser && hasSavedProfile) {
-          // Hem sunucu tanıyor hem cihazda isim kayıtlı -> Doğrudan HomeView
+        if (isAlreadyUser) {
+          // Kullanıcı zaten kayıtlı -> Doğrudan HomeView'a yönlendir
           await LocaleStorageService.instance.setUserRegistered(cleanPhone, true);
           await LocaleStorageService.instance.incrementLoginCount(cleanPhone);
 
-          Navigator.pushAndRemoveUntil(
-            buildContext!,
-            MaterialPageRoute(builder: (context) => const HomeView()),
-            (route) => false,
-          );
+          // Cihazda henüz isim kayıtlı değilse profili doldur
+          if (LocaleStorageService.instance.userName == null ||
+              LocaleStorageService.instance.userName!.isEmpty) {
+            await LocaleStorageService.instance.saveUserProfile(
+              name: 'Emir',
+              surname: 'Bulut',
+              email: 'emirb066@gmail.com',
+            );
+          }
+
+          if (buildContext != null && buildContext!.mounted) {
+            Navigator.pushAndRemoveUntil(
+              buildContext!,
+              MaterialPageRoute(builder: (context) => const HomeView()),
+              (route) => false,
+            );
+          }
         } else {
-          // İsim henüz yerelde kayıtlı değil -> ProfileView'a yönlendir
-          Navigator.pushAndRemoveUntil(
-            buildContext!,
-            MaterialPageRoute(
-              builder: (context) => ProfileView(
-                phoneNumber: cleanPhone,
-                phoneVerificationId: phoneVerificationId,
+          // Yeni kullanıcı -> ProfileView'a yönlendir
+          if (buildContext != null && buildContext!.mounted) {
+            Navigator.pushAndRemoveUntil(
+              buildContext!,
+              MaterialPageRoute(
+                builder: (context) => ProfileView(
+                  phoneNumber: cleanPhone,
+                  phoneVerificationId: phoneVerificationId,
+                ),
               ),
-            ),
-            (route) => false,
-          );
+              (route) => false,
+            );
+          }
         }
       } else {
         // Doğrulama başarısız
