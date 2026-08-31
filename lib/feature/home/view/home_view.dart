@@ -120,23 +120,13 @@ class HomeView extends StatelessWidget {
                             if (LocaleStorageService.instance.userEmail != null &&
                                 LocaleStorageService.instance.userEmail!.isNotEmpty) ...[
                               const SizedBox(height: 4),
-                              Row(
-                                children: [
-                                  const Icon(
-                                    Icons.alternate_email_rounded,
-                                    size: 13,
-                                    color: Color(0xFF94A3B8),
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    LocaleStorageService.instance.userEmail!,
-                                    style: const TextStyle(
-                                      fontSize: 12,
-                                      color: Color(0xFF94A3B8),
-                                      fontWeight: FontWeight.w400,
-                                    ),
-                                  ),
-                                ],
+                              Text(
+                                LocaleStorageService.instance.userEmail!,
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: Color(0xFF94A3B8),
+                                  fontWeight: FontWeight.w400,
+                                ),
                               ),
                             ],
                           ],
