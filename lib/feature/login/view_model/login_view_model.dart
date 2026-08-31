@@ -90,10 +90,13 @@ abstract class _LoginViewModelBase with Store implements BaseViewModel {
       final existingToken = LocaleStorageService.instance.getTokenForPhone(phone);
       final currentLoginCount = LocaleStorageService.instance.getLoginCount(phone);
 
-      log('🔍 [LOGIN VM] Numara: $phone, Kayıtlı mı: $isRegistered, Sayaç: $currentLoginCount');
+      final hasSavedProfile = LocaleStorageService.instance.userName != null &&
+          LocaleStorageService.instance.userName!.isNotEmpty;
 
-      // Eğer kullanıcı daha önce kayıt olduysa ve geçerli token'ı varsa:
-      if (isRegistered && existingToken != null && existingToken.isNotEmpty) {
+      log('🔍 [LOGIN VM] Numara: $phone, Kayıtlı mı: $isRegistered, Profil var mı: $hasSavedProfile, Sayaç: $currentLoginCount');
+
+      // Eğer kullanıcı daha önce kayıt olduysa, geçerli token'ı varsa VE profil bilgisi kayıtlıysa:
+      if (isRegistered && existingToken != null && existingToken.isNotEmpty && hasSavedProfile) {
         if (currentLoginCount < 4) {
           // 1., 2., 3., 4. Girişler: SMS sormadan doğrudan HomeView'a al
           final newCount = await LocaleStorageService.instance.incrementLoginCount(phone);

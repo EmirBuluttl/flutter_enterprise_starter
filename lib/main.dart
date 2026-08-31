@@ -25,11 +25,13 @@ void main() async {
   // servisin singleton instance'ını oluşturur.
   await LocaleStorageService.init();
 
-  // Kayıtlı token var mı?
+  // Kayıtlı token ve profil var mı?
   // Varsa uygulama HomeView'dan başlar, kullanıcıdan tekrar giriş istenmez.
-  final hasToken = LocaleStorageService.instance.hasToken;
+  final hasActiveSession = LocaleStorageService.instance.hasToken &&
+      LocaleStorageService.instance.userName != null &&
+      LocaleStorageService.instance.userName!.isNotEmpty;
 
-  runApp(EnterpriseApp(startWithHome: hasToken));
+  runApp(EnterpriseApp(startWithHome: hasActiveSession));
 }
 
 /// Root Application Widget

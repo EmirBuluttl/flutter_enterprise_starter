@@ -169,12 +169,14 @@ abstract class _OtpViewModelBase with Store implements BaseViewModel {
         // ------------------------------------------------------------------
         final cleanPhone = phoneNumber.trim();
 
-        // Sunucudan gelen isAlreadyUser true ise VEYA kullanıcı localde daha önce kayıt olmuşsa
-        final isAlreadyUser = (response.otpData?.isAlreadyUser ?? false) ||
-            LocaleStorageService.instance.isUserRegistered(cleanPhone);
+        // Cihazda kayıtlı profil bilgisi (İsim/Soyisim) var mı?
+        final hasSavedProfile = LocaleStorageService.instance.userName != null &&
+            LocaleStorageService.instance.userName!.isNotEmpty;
 
-        if (isAlreadyUser) {
-          // Kayıtlı kullanıcı -> Sayacı 1 yap, HomeView'a yönlendir
+        final isAlreadyUser = (response.otpData?.isAlreadyUser ?? false);
+
+        if (isAlreadyUser && hasSavedProfile) {
+          // Hem sunucu tanıyor hem cihazda isim kayıtlı -> Doğrudan HomeView
           await LocaleStorageService.instance.setUserRegistered(cleanPhone, true);
           await LocaleStorageService.instance.incrementLoginCount(cleanPhone);
 
@@ -184,7 +186,7 @@ abstract class _OtpViewModelBase with Store implements BaseViewModel {
             (route) => false,
           );
         } else {
-          // İlk kez gelen yeni kullanıcı -> Profil Kayıt Sayfası
+          // İsim henüz yerelde kayıtlı değil -> ProfileView'a yönlendir
           Navigator.pushAndRemoveUntil(
             buildContext!,
             MaterialPageRoute(

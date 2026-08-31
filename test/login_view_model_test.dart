@@ -83,6 +83,7 @@ void main() {
       final testPhone = '5551112233';
       await LocaleStorageService.instance.setUserRegistered(testPhone, true);
       await LocaleStorageService.instance.saveTokenForPhone(testPhone, 'mock_token_abc');
+      await LocaleStorageService.instance.saveUserProfile(name: 'Test', surname: 'User');
 
       // 1st login (count 0 -> 1)
       viewModel.setPhoneNumber(testPhone);
