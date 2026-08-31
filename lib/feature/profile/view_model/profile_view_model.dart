@@ -156,6 +156,13 @@ abstract class _ProfileViewModelBase with Store implements BaseViewModel {
           await LocaleStorageService.instance.incrementLoginCount(cleanPhone);
         }
 
+        // İsim, Soyisim ve E-posta bilgilerini kaydet
+        await LocaleStorageService.instance.saveUserProfile(
+          name: name.trim(),
+          surname: surname.trim(),
+          email: email.trim(),
+        );
+
         if (buildContext != null && buildContext!.mounted) {
           Navigator.pushAndRemoveUntil(
             buildContext!,

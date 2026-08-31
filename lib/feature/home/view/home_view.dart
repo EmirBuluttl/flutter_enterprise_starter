@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_mobx/flutter_mobx.dart';
 import '../../../core/constants/app_constants.dart';
+import '../../../core/init/cache/locale_storage_service.dart';
 import '../../../product/theme/theme_view_model.dart';
 import '../../login/view/renault_port_login_view.dart';
 
@@ -72,7 +73,7 @@ class HomeView extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Welcome Banner
+              // Welcome Banner (Kullanıcı Bilgileri)
               Card(
                 color: theme.brightness == Brightness.dark
                     ? const Color(0xFF1E293B)
@@ -108,14 +109,36 @@ class HomeView extends StatelessWidget {
                               ),
                             ),
                             const SizedBox(height: 4),
-                            const Text(
-                              'Sayın Renault Kullanıcısı',
-                              style: TextStyle(
+                            Text(
+                              LocaleStorageService.instance.userFullName,
+                              style: const TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
                                 color: Colors.white,
                               ),
                             ),
+                            if (LocaleStorageService.instance.userEmail != null &&
+                                LocaleStorageService.instance.userEmail!.isNotEmpty) ...[
+                              const SizedBox(height: 4),
+                              Row(
+                                children: [
+                                  const Icon(
+                                    Icons.alternate_email_rounded,
+                                    size: 13,
+                                    color: Color(0xFF94A3B8),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    LocaleStorageService.instance.userEmail!,
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      color: Color(0xFF94A3B8),
+                                      fontWeight: FontWeight.w400,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
                           ],
                         ),
                       ),

@@ -17,6 +17,11 @@ class LocaleKeys {
   /// Telefon bazlı giriş sayacı key'i (1..5)
   static String loginCountKey(String phone) => 'login_count_$phone';
 
+  /// Kullanıcı Profil Bilgileri
+  static const String userName = 'user_name';
+  static const String userSurname = 'user_surname';
+  static const String userEmail = 'user_email';
+
   /// Telefon bazlı token key'i
   static String tokenKey(String phone) => 'token_$phone';
 }

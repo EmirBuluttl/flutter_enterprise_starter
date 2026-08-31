@@ -138,4 +138,40 @@ class LocaleStorageService {
   Future<void> resetLoginCount(String phone) async {
     await save<int>(key: LocaleKeys.loginCountKey(phone), value: 0);
   }
+
+  // ---------------------------------------------------------------------------
+  // KULLANICI PROFİL BİLGİLERİ (İSİM, SOYİSİM, E-POSTA)
+  // ---------------------------------------------------------------------------
+
+  /// Kullanıcının profil bilgilerini SharedPreferences'a kaydeder
+  Future<void> saveUserProfile({
+    required String name,
+    required String surname,
+    String? email,
+  }) async {
+    await save<String>(key: LocaleKeys.userName, value: name);
+    await save<String>(key: LocaleKeys.userSurname, value: surname);
+    if (email != null && email.isNotEmpty) {
+      await save<String>(key: LocaleKeys.userEmail, value: email);
+    } else {
+      await remove(key: LocaleKeys.userEmail);
+    }
+  }
+
+  /// Kayıtlı Ad
+  String? get userName => read<String>(key: LocaleKeys.userName);
+
+  /// Kayıtlı Soyad
+  String? get userSurname => read<String>(key: LocaleKeys.userSurname);
+
+  /// Kayıtlı E-posta
+  String? get userEmail => read<String>(key: LocaleKeys.userEmail);
+
+  /// Kayıtlı Ad Soyad (Boşsa varsayılan metin döner)
+  String get userFullName {
+    final n = userName ?? '';
+    final s = userSurname ?? '';
+    final full = '$n $s'.trim();
+    return full.isNotEmpty ? full : 'Sayın Renault Kullanıcısı';
+  }
 }

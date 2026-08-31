@@ -117,6 +117,12 @@ void main() {
       // Verify that local storage marked user as registered
       expect(LocaleStorageService.instance.isUserRegistered(testPhone), isTrue);
       expect(LocaleStorageService.instance.getLoginCount(testPhone), 1);
+
+      // Verify profile details saved in local storage
+      expect(LocaleStorageService.instance.userName, 'Emir');
+      expect(LocaleStorageService.instance.userSurname, 'Bulut');
+      expect(LocaleStorageService.instance.userEmail, 'emir@example.com');
+      expect(LocaleStorageService.instance.userFullName, 'Emir Bulut');
     });
   });
 }
