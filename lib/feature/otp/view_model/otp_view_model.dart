@@ -188,7 +188,10 @@ abstract class _OtpViewModelBase with Store implements BaseViewModel {
           Navigator.pushAndRemoveUntil(
             buildContext!,
             MaterialPageRoute(
-              builder: (context) => ProfileView(phoneNumber: cleanPhone),
+              builder: (context) => ProfileView(
+                phoneNumber: cleanPhone,
+                phoneVerificationId: phoneVerificationId,
+              ),
             ),
             (route) => false,
           );

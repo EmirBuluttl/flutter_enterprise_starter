@@ -1,67 +1,48 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_mobx/flutter_mobx.dart';
 import '../../../core/constants/app_constants.dart';
-import '../../../core/init/cache/locale_storage_service.dart';
-import '../../home/view/home_view.dart';
+import '../view_model/profile_view_model.dart';
 
-/// Profil Kayıt Ekranı
+/// Profil Kayıt Ekranı (Renault Port Sign-Up)
 ///
 /// ## Ne Zaman Gösterilir?
 /// OTP doğrulaması başarılı olup `isAlreadyUser == false` döndüğünde
 /// kullanıcı bu sayfaya yönlendirilir.
 ///
 /// ## Ne Yapar?
-/// Kullanıcıdan temel profil bilgilerini alır (Ad, Soyad).
-/// Bilgiler kaydedildikten sonra telefon numarası için `isUserRegistered = true`
-/// işaretlenir ve [HomeView]'a geçiş yapılır.
+/// Kullanıcıdan Ad, Soyad, E-posta (opsiyonel) ve KVKK onaylarını alır.
+/// `POST /api/v1/customers/sign-up` API'sine istek atarak kaydı tamamlar.
 class ProfileView extends StatefulWidget {
-  final String? phoneNumber;
+  final String phoneNumber;
+  final String phoneVerificationId;
 
-  const ProfileView({super.key, this.phoneNumber});
+  const ProfileView({
+    super.key,
+    required this.phoneNumber,
+    required this.phoneVerificationId,
+  });
 
   @override
   State<ProfileView> createState() => _ProfileViewState();
 }
 
 class _ProfileViewState extends State<ProfileView> {
-  final _formKey = GlobalKey<FormState>();
-  final _nameController = TextEditingController();
-  final _surnameController = TextEditingController();
-  bool _isLoading = false;
+  late final ProfileViewModel _viewModel;
 
   @override
-  void dispose() {
-    _nameController.dispose();
-    _surnameController.dispose();
-    super.dispose();
+  void initState() {
+    super.initState();
+    _viewModel = ProfileViewModel(
+      phoneNumber: widget.phoneNumber,
+      phoneVerificationId: widget.phoneVerificationId,
+    );
+    _viewModel.init();
   }
 
-  Future<void> _onSave() async {
-    if (!_formKey.currentState!.validate()) return;
-
-    setState(() => _isLoading = true);
-
-    // TODO: Profil kayıt API'si geldiğinde buraya eklenecek
-    // Simülasyon gecikmesi
-    await Future.delayed(const Duration(milliseconds: 600));
-
-    // Telefon numarasını kayıtlı olarak işaretle ve sayacı 1 yap
-    final phone = widget.phoneNumber ??
-        LocaleStorageService.instance.lastPhoneNumber ??
-        '';
-
-    if (phone.isNotEmpty) {
-      await LocaleStorageService.instance.setUserRegistered(phone, true);
-      await LocaleStorageService.instance.incrementLoginCount(phone);
-    }
-
-    if (!mounted) return;
-    setState(() => _isLoading = false);
-
-    Navigator.pushAndRemoveUntil(
-      context,
-      MaterialPageRoute(builder: (context) => const HomeView()),
-      (route) => false,
-    );
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _viewModel.setContext(context);
   }
 
   @override
@@ -89,86 +70,163 @@ class _ProfileViewState extends State<ProfileView> {
       ),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 24),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const SizedBox(height: 16),
+          padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const SizedBox(height: 8),
 
-                // Başlık
-                const Text(
-                  'Profilinizi Oluşturun',
-                  style: TextStyle(
-                    fontSize: 26,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF0F172A),
+              // Başlık
+              const Text(
+                'Profilinizi Oluşturun',
+                style: TextStyle(
+                  fontSize: 26,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF0F172A),
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Hesabınızı kullanabilmek için\nlütfen bilgilerinizi girin.',
+                style: TextStyle(
+                  fontSize: 15,
+                  color: Color(0xFF64748B),
+                  height: 1.5,
+                ),
+              ),
+              const SizedBox(height: 32),
+
+              // Hata Mesajı Banner'ı
+              Observer(
+                builder: (_) {
+                  if (_viewModel.errorMessage == null) {
+                    return const SizedBox.shrink();
+                  }
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 20),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFEF2F2),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: const Color(0xFFFCA5A5)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.error_outline, color: Color(0xFFDC2626), size: 20),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            _viewModel.errorMessage!,
+                            style: const TextStyle(
+                              color: Color(0xFFDC2626),
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+
+              // Ad alanı (Zorunlu)
+              _ProfileInputField(
+                label: 'Adınız *',
+                hint: 'Adınızı girin',
+                icon: Icons.person_outline_rounded,
+                textInputAction: TextInputAction.next,
+                onChanged: _viewModel.setName,
+              ),
+              const SizedBox(height: 16),
+
+              // Soyad alanı (Zorunlu)
+              _ProfileInputField(
+                label: 'Soyadınız *',
+                hint: 'Soyadınızı girin',
+                icon: Icons.person_outline_rounded,
+                textInputAction: TextInputAction.next,
+                onChanged: _viewModel.setSurname,
+              ),
+              const SizedBox(height: 16),
+
+              // E-posta alanı (İsteğe Bağlı)
+              _ProfileInputField(
+                label: 'E-posta Adresi (İsteğe Bağlı)',
+                hint: 'ornek@email.com',
+                icon: Icons.mail_outline_rounded,
+                keyboardType: TextInputType.emailAddress,
+                textInputAction: TextInputAction.done,
+                onChanged: _viewModel.setEmail,
+              ),
+              const SizedBox(height: 24),
+
+              const Divider(color: Color(0xFFE2E8F0)),
+              const SizedBox(height: 16),
+
+              // KVKK Onay Kutusu (Zorunlu)
+              Observer(
+                builder: (_) => _CheckboxTile(
+                  value: _viewModel.isKvkkAccepted,
+                  onChanged: (val) => _viewModel.setKvkkAccepted(val ?? false),
+                  title: RichText(
+                    text: const TextSpan(
+                      text: 'KVKK Aydınlatma Metni',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF0099E6),
+                      ),
+                      children: [
+                        TextSpan(
+                          text: '\'ni okudum ve kabul ediyorum. *',
+                          style: TextStyle(
+                            fontWeight: FontWeight.normal,
+                            color: Color(0xFF334155),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-                const SizedBox(height: 8),
-                const Text(
-                  'Hesabınızı kullanabilmek için\nlütfen bilgilerinizi girin.',
-                  style: TextStyle(
-                    fontSize: 15,
-                    color: Color(0xFF64748B),
-                    height: 1.5,
+              ),
+              const SizedBox(height: 12),
+
+              // İletişim İzni Kutusu (Opsiyonel)
+              Observer(
+                builder: (_) => _CheckboxTile(
+                  value: _viewModel.isCommunicationAccepted,
+                  onChanged: (val) => _viewModel.setCommunicationAccepted(val ?? false),
+                  title: const Text(
+                    'Bana SMS, E-posta ve Telefon ile kampanya ve bilgilendirme iletileri gönderilmesini onaylıyorum.',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Color(0xFF334155),
+                      height: 1.4,
+                    ),
                   ),
                 ),
-                const SizedBox(height: 40),
+              ),
+              const SizedBox(height: 32),
 
-                // Ad alanı
-                _ProfileTextField(
-                  controller: _nameController,
-                  label: 'Adınız',
-                  hint: 'Adınızı girin',
-                  icon: Icons.person_outline_rounded,
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'Ad alanı boş bırakılamaz.';
-                    }
-                    if (value.trim().length < 2) {
-                      return 'Ad en az 2 karakter olmalıdır.';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
-
-                // Soyad alanı
-                _ProfileTextField(
-                  controller: _surnameController,
-                  label: 'Soyadınız',
-                  hint: 'Soyadınızı girin',
-                  icon: Icons.person_outline_rounded,
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'Soyad alanı boş bırakılamaz.';
-                    }
-                    if (value.trim().length < 2) {
-                      return 'Soyad en az 2 karakter olmalıdır.';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 40),
-
-                // Kaydet Butonu
-                SizedBox(
+              // Kayıt Ol ve Devam Et Butonu
+              Observer(
+                builder: (_) => SizedBox(
                   height: 52,
                   child: ElevatedButton(
-                    onPressed: _isLoading ? null : _onSave,
+                    onPressed: _viewModel.isButtonEnabled
+                        ? _viewModel.submitSignUp
+                        : null,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF0099E6),
                       foregroundColor: Colors.white,
-                      disabledBackgroundColor:
-                          const Color(0xFF0099E6).withValues(alpha: 0.5),
+                      disabledBackgroundColor: const Color(0xFF0099E6).withValues(alpha: 0.35),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
                       elevation: 0,
                     ),
-                    child: _isLoading
+                    child: _viewModel.isLoading
                         ? const SizedBox(
                             width: 22,
                             height: 22,
@@ -178,7 +236,7 @@ class _ProfileViewState extends State<ProfileView> {
                             ),
                           )
                         : const Text(
-                            'Kaydet ve Devam Et',
+                            'Kayıt Ol ve Devam Et',
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w600,
@@ -187,8 +245,9 @@ class _ProfileViewState extends State<ProfileView> {
                           ),
                   ),
                 ),
-              ],
-            ),
+              ),
+              const SizedBox(height: 20),
+            ],
           ),
         ),
       ),
@@ -196,20 +255,22 @@ class _ProfileViewState extends State<ProfileView> {
   }
 }
 
-/// Profil formu için tekrar kullanılabilir metin alanı widget'ı
-class _ProfileTextField extends StatelessWidget {
-  final TextEditingController controller;
+/// Profil Formu Giriş Alanı Widget'ı
+class _ProfileInputField extends StatelessWidget {
   final String label;
   final String hint;
   final IconData icon;
-  final String? Function(String?)? validator;
+  final TextInputType? keyboardType;
+  final TextInputAction? textInputAction;
+  final ValueChanged<String> onChanged;
 
-  const _ProfileTextField({
-    required this.controller,
+  const _ProfileInputField({
     required this.label,
     required this.hint,
     required this.icon,
-    this.validator,
+    this.keyboardType,
+    this.textInputAction,
+    required this.onChanged,
   });
 
   @override
@@ -225,15 +286,15 @@ class _ProfileTextField extends StatelessWidget {
             color: Color(0xFF374151),
           ),
         ),
-        const SizedBox(height: 8),
-        TextFormField(
-          controller: controller,
-          validator: validator,
-          textInputAction: TextInputAction.next,
+        const SizedBox(height: 6),
+        TextField(
+          keyboardType: keyboardType,
+          textInputAction: textInputAction,
+          onChanged: onChanged,
           decoration: InputDecoration(
             hintText: hint,
-            hintStyle: const TextStyle(color: Color(0xFFADB5BD)),
-            prefixIcon: Icon(icon, color: const Color(0xFF9CA3AF), size: 20),
+            hintStyle: const TextStyle(color: Color(0xFF94A3B8), fontSize: 14),
+            prefixIcon: Icon(icon, color: const Color(0xFF94A3B8), size: 20),
             filled: true,
             fillColor: const Color(0xFFF8FAFC),
             border: OutlineInputBorder(
@@ -248,19 +309,54 @@ class _ProfileTextField extends StatelessWidget {
               borderRadius: BorderRadius.circular(12),
               borderSide: const BorderSide(color: Color(0xFF0099E6), width: 2),
             ),
-            errorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Color(0xFFEF4444)),
-            ),
-            focusedErrorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Color(0xFFEF4444), width: 2),
-            ),
-            contentPadding:
-                const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           ),
         ),
       ],
+    );
+  }
+}
+
+/// Onay Kutusu (Checkbox) Widget'ı
+class _CheckboxTile extends StatelessWidget {
+  final bool value;
+  final ValueChanged<bool?> onChanged;
+  final Widget title;
+
+  const _CheckboxTile({
+    required this.value,
+    required this.onChanged,
+    required this.title,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: () => onChanged(!value),
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SizedBox(
+              width: 24,
+              height: 24,
+              child: Checkbox(
+                value: value,
+                onChanged: onChanged,
+                activeColor: const Color(0xFF0099E6),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                side: const BorderSide(color: Color(0xFF94A3B8), width: 1.5),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(child: title),
+          ],
+        ),
+      ),
     );
   }
 }

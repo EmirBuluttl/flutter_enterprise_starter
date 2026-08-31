@@ -3,8 +3,7 @@ import 'locale_keys.dart';
 
 /// Merkezi Local Storage Servisi (SharedPreferences Wrapper)
 ///
-/// Singleton olarak çalışır. Uygulama başlangıcında [init()] çağrılarak
-/// hazır hale getirilmelidir (main.dart içinde).
+
 class LocaleStorageService {
   LocaleStorageService._();
 

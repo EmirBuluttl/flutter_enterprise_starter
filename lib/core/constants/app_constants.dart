@@ -55,8 +55,9 @@ class AppConstants {
   static const String renaultBrandId = 'c2e9b958-7108-4185-bf31-e87171fc267f';
   static const String appVersion = '2.2.5';
 
-  // Endpoint
+  // Endpoints
   static const String phoneVerificationEndpoint = '/api/v1/customers/verifications/phone';
+  static const String signUpEndpoint = '/api/v1/customers/sign-up';
 
   // Turkey Phone Mask & Formatter (+90 (5XX) XXX XX XX)
   static const String phoneMask = '+90 (###) ### ## ##';
